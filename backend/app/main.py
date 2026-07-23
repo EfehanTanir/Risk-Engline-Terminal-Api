@@ -209,14 +209,20 @@ def api_market_news(lang: str = "tr"):
     """Home-page panel: Google's top business/economy headlines of the day,
     tagged with the tickers they mention."""
     is_en = lang == "en"
+    # Google blocks the topic feed from datacenter IPs (503) but allows the
+    # search feed, so fall back to a broad last-24h market query on any failure.
+    items = []
     try:
         items = news_mod.top_business_news("en" if is_en else "tr", 12)
-        if not items:  # topic feed empty? fall back to a market search
-            items = news_mod.google_news(
-                "stock market" if is_en else "Borsa İstanbul hisse",
-                "en" if is_en else "tr", 12)
-    except Exception as e:
-        raise HTTPException(502, f"Google News error: {e}")
+    except Exception:
+        pass
+    if not items:
+        fallback_q = ("stock market OR earnings OR fed when:1d" if is_en
+                      else "Borsa İstanbul OR TCMB OR dolar OR faiz when:1d")
+        try:
+            items = news_mod.google_news(fallback_q, "en" if is_en else "tr", 12)
+        except Exception as e:
+            raise HTTPException(502, f"Google News error: {e}")
     for item in items:
         item["tickers"] = news_mod.extract_tickers(item["title"])
     return {"lang": lang, "items": items}
