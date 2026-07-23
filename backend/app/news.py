@@ -42,7 +42,7 @@ _TR_LOWER = str.maketrans("İI", "iı")
 TICKER_PATTERNS = [
     ("THYAO.IS", "THYAO", ["türk hava yolları", " thy ", "thyao"]),
     ("ASELS.IS", "ASELS", ["aselsan", "asels"]),
-    ("GARAN.IS", "GARAN", ["garanti bbva", "garanti bankası", "garan"]),
+    ("GARAN.IS", "GARAN", ["garanti bbva", "garanti bankası", " garan "]),
     ("AKBNK.IS", "AKBNK", ["akbank", "akbnk"]),
     ("ISCTR.IS", "ISCTR", ["iş bankası", "isctr"]),
     ("YKBNK.IS", "YKBNK", ["yapı kredi", "ykbnk"]),
@@ -75,11 +75,18 @@ TICKER_PATTERNS = [
     ("EKGYO.IS", "EKGYO", ["emlak konut", "ekgyo"]),
     ("AKSEN.IS", "AKSEN", ["aksa enerji", "aksen"]),
     ("ALARK.IS", "ALARK", ["alarko", "alark"]),
-    ("KONTR.IS", "KONTR", ["kontrolmatik", "kontr"]),
+    ("KONTR.IS", "KONTR", ["kontrolmatik"]),
     ("DOHOL.IS", "DOHOL", ["doğan holding", "dohol"]),
     ("KOZAL.IS", "KOZAL", ["koza altın", "kozal"]),
     ("OYAKC.IS", "OYAKC", ["oyak çimento", "oyakc"]),
     ("XU100.IS", "BIST100", ["bist 100", "bist100", "borsa istanbul endeks"]),
+    # commodities & FX (careful patterns: "altın" alone would match "altında" = "below")
+    ("GC=F", "GOLD", ["gram altın", "ons altın", "çeyrek altın", "altın fiyat",
+                      "altın, ", "altın yüksel", "altın geril", "altın rekor",
+                      "altın zirve", "gold price"]),
+    ("BZ=F", "BRENT", ["brent", "petrol fiyat", "varil fiyatı", "oil price"]),
+    ("USDTRY=X", "USD/TRY", ["dolar kuru", "dolar/tl", "dolar tl", "doların ateşi"]),
+    ("EURTRY=X", "EUR/TRY", ["euro kuru", "euro/tl"]),
     # global majors
     ("AAPL", "AAPL", ["apple"]),
     ("TSLA", "TSLA", ["tesla"]),
