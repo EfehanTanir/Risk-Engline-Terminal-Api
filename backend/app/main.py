@@ -137,6 +137,17 @@ def api_stock(symbol: str = Query(...)):
     }
 
 
+# ---- fund universe (screener) -------------------------------------------
+
+@app.get("/api/funds")
+def api_funds():
+    """Full TEFAS fund universe with period returns and risk values."""
+    try:
+        return {"funds": tefas.fund_list()}
+    except Exception as e:
+        raise HTTPException(502, f"TEFAS error: {e}")
+
+
 # ---- fund detail ---------------------------------------------------------
 
 @app.get("/api/fund")
