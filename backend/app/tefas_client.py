@@ -78,27 +78,38 @@ def fund_history(code: str, days: int = 380) -> Optional[pd.DataFrame]:
     return df if len(df) else None
 
 
+# Columns tefas-crawler returns that are NOT asset-class percentages
+NON_ALLOCATION = INFO_COLUMNS | {
+    "category_total", "category_rank", "rank", "market_share",
+    "periodic_return", "tmm",
+}
+
+
 def latest_allocation(df: pd.DataFrame) -> Optional[dict]:
-    """Non-zero allocation percentages from the most recent row."""
-    row = df.iloc[-1]
-    slices = []
-    for col in df.columns:
-        if col in INFO_COLUMNS:
-            continue
-        try:
-            pct = float(row[col])
-        except (TypeError, ValueError):
-            continue
-        if pct > 0.01:
-            slices.append({
-                "code": col,
-                "label": col.replace("_", " ").title(),
-                "pct": pct,
-            })
-    if not slices:
-        return None
-    slices.sort(key=lambda s: -s["pct"])
-    return {"date": str(pd.Timestamp(row["date"]).date()), "slices": slices}
+    """Asset-class percentages from the most recent row that has a valid
+    breakdown. TEFAS publishes the breakdown with a lag, so the newest rows can
+    be empty — walk backwards until the slice total looks like ~100%."""
+    import math as _math
+    alloc_cols = [c for c in df.columns if c not in NON_ALLOCATION]
+    for idx in range(len(df) - 1, max(len(df) - 20, -1), -1):
+        row = df.iloc[idx]
+        slices, total = [], 0.0
+        for col in alloc_cols:
+            try:
+                pct = float(row[col])
+            except (TypeError, ValueError):
+                continue
+            if _math.isfinite(pct) and 0.01 < pct <= 100.0:
+                slices.append({
+                    "code": col,
+                    "label": col.replace("_", " ").title(),
+                    "pct": pct,
+                })
+                total += pct
+        if slices and 50.0 <= total <= 150.0:
+            slices.sort(key=lambda s: -s["pct"])
+            return {"date": str(pd.Timestamp(row["date"]).date()), "slices": slices}
+    return None
 
 
 # ---- Fund universe (cached ~6h) -----------------------------------------
