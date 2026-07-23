@@ -52,23 +52,28 @@ def _safe_info(ticker: yf.Ticker) -> dict:
 
 
 def quick_quote(symbol: str) -> Optional[dict]:
-    """Tape quote: fast_info first, info only for the display name."""
+    """Tape quote. Uses the SAME price/previous-close sources as full_quote so
+    the home page and the detail page always show identical change figures."""
     try:
         t = yf.Ticker(symbol)
-        fi = t.fast_info
-        price = fi.get("lastPrice")
-        prev = fi.get("previousClose")
+        info = _safe_info(t)
+        fi = {}
+        try:
+            fi = dict(t.fast_info)
+        except Exception:
+            pass
+        price = info.get("regularMarketPrice") or info.get("currentPrice") or fi.get("lastPrice")
         if price is None:
             return None
-        change = price - prev if prev else None
-        info = _safe_info(t)
+        prev = info.get("regularMarketPreviousClose") or info.get("previousClose") or fi.get("previousClose")
+        change = (price - prev) if prev else None
         return {
             "symbol": symbol,
             "name": info.get("shortName") or info.get("longName") or symbol,
             "price": price,
             "change": change,
             "changePercent": (change / prev * 100) if (change is not None and prev) else None,
-            "currency": fi.get("currency") or info.get("currency"),
+            "currency": info.get("currency") or fi.get("currency"),
             "marketState": info.get("marketState"),
         }
     except Exception:
