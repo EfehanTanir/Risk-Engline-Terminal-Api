@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EQUITY — FINANSLA TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="index.html"><b>F1</b><span data-i18n="nav.home">HOME</span></a>
+      <a href="risk.html"><b>F2</b><span data-i18n="nav.risk">RISK ENGINE</span></a>
+    </nav>
+    <div class="topsearch">
+      <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap" id="main">
+    <div class="loading" id="page-loading" data-i18n="stock.loading">LOADING SECURITY</div>
+
+    <div id="content" hidden>
+      <div class="identity">
+        <div>
+          <div class="code" id="sym"></div>
+          <div class="fullname" id="fullname"></div>
+          <div class="tags" id="tags"></div>
+        </div>
+        <div class="pricebox">
+          <div class="px mono-num" id="px"></div>
+          <div class="chg mono-num" id="chg"></div>
+          <div class="asof" id="asof"></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <section class="col-8 panel">
+          <div class="panel-head"><span data-i18n="panel.pricehist">Price History</span>
+            <span class="right" id="range-btns">
+              <button class="btn" data-days="30">1M</button>
+              <button class="btn" data-days="90">3M</button>
+              <button class="btn" data-days="180">6M</button>
+              <button class="btn active" data-days="365">1Y</button>
+            </span>
+          </div>
+          <div class="panel-body"><div class="chart-box" id="price-chart-box"><canvas id="price-chart"></canvas></div></div>
+        </section>
+
+        <section class="col-4 panel">
+          <div class="panel-head"><span data-i18n="panel.keystats">Key Statistics</span></div>
+          <div class="panel-body tight"><div class="stat-list" id="stats"></div></div>
+        </section>
+
+        <section class="col-4 panel">
+          <div class="panel-head"><span data-i18n="panel.profile">Company Profile</span></div>
+          <div class="panel-body">
+            <div class="stat-list" id="profile-facts" style="margin:-12px -12px 10px"></div>
+            <p class="profile-text clamped" id="about">—</p>
+            <button class="btn readmore" id="readmore" hidden></button>
+          </div>
+        </section>
+
+        <section class="col-4 panel">
+          <div class="panel-head"><span data-i18n="panel.risk">Risk Metrics</span> <span class="right small faint" data-i18n="risk.window">1Y DAILY</span></div>
+          <div class="panel-body">
+            <div class="chart-box short"><canvas id="risk-chart"></canvas></div>
+            <div class="stat-list" id="risk-list" style="margin:10px -12px -12px"></div>
+          </div>
+        </section>
+
+        <section class="col-4 panel">
+          <div class="panel-head"><span data-i18n="panel.greeks">Options Greeks</span> <span class="right small faint">BLACK-SCHOLES</span></div>
+          <div class="panel-body tight">
+            <table class="data" id="greeks-table"></table>
+            <p class="small faint" style="padding:10px 12px" id="greeks-note"></p>
+          </div>
+        </section>
+
+        <section class="col-12 panel">
+          <div class="panel-head"><span data-i18n="panel.news">News &amp; Sentiment</span> <span class="right small faint" data-i18n="news.hint">GOOGLE NEWS — DOT = ESTIMATED IMPACT</span></div>
+          <div class="panel-body"><div class="news-list" id="news"><div class="loading" data-i18n="news.fetching">FETCHING NEWS</div></div></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● LIVE</span>
+    <span data-i18n="status.data">DATA: YAHOO FINANCE · TEFAS · GOOGLE NEWS</span>
+    <span class="right" data-i18n="status.edu">EDUCATIONAL USE ONLY — NOT INVESTMENT ADVICE</span>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/stock.js"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RISK ENGINE — FINANSLA TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="index.html"><b>F1</b><span data-i18n="nav.home">HOME</span></a>
+      <a href="risk.html" class="active"><b>F2</b><span data-i18n="nav.risk">RISK ENGINE</span></a>
+    </nav>
+    <div class="topsearch">
+      <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="identity" style="padding-bottom:8px">
+      <div>
+        <div class="code" style="font-size:26px" data-i18n="risk.title">PORTFOLIO RISK ENGINE</div>
+        <div class="fullname" data-i18n="risk.subtitle"></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="col-5 panel">
+        <div class="panel-head"><span data-i18n="risk.builder">Portfolio Builder</span></div>
+        <div class="panel-body">
+          <div style="position:relative">
+            <input id="asset-search" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="risk.addph"
+                   placeholder="ADD ASSET — search equities &amp; TEFAS funds…"
+                   style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none">
+            <div class="dropdown" id="asset-dropdown" hidden></div>
+          </div>
+
+          <div id="asset-list" style="margin-top:12px"></div>
+          <div class="small faint" id="weight-total" style="padding:8px 2px"></div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px">
+            <label class="small muted"><span data-i18n="risk.conf">CONFIDENCE</span>
+              <select id="confidence"><option value="0.95">95%</option><option value="0.99">99%</option></select>
+            </label>
+            <label class="small muted"><span data-i18n="risk.horizon">HORIZON (DAYS)</span>
+              <input id="horizon" type="number" min="1" max="30" value="1">
+            </label>
+            <button class="btn" id="equalize" data-i18n="risk.equal">EQUAL WEIGHTS</button>
+          </div>
+
+          <button class="btn primary" id="run" style="width:100%;margin-top:14px;padding:10px" disabled data-i18n="risk.run">▶ RUN RISK ANALYSIS</button>
+          <div class="small faint" style="margin-top:10px" data-i18n="risk.builderhint"></div>
+        </div>
+      </section>
+
+      <section class="col-7 panel">
+        <div class="panel-head"><span data-i18n="risk.methodology">Methodology</span></div>
+        <div class="panel-body profile-text">
+          <p data-i18n="risk.m1"></p>
+          <p style="margin-top:8px" data-i18n="risk.m2"></p>
+          <p style="margin-top:8px" data-i18n="risk.m3"></p>
+          <p style="margin-top:8px" data-i18n="risk.m4"></p>
+          <p style="margin-top:8px" class="faint" data-i18n="risk.m5"></p>
+        </div>
+      </section>
+
+      <div class="col-12" id="results" hidden>
+        <div class="tiles" id="tiles" style="margin-bottom:12px"></div>
+
+        <div class="grid">
+          <section class="col-6 panel">
+            <div class="panel-head"><span data-i18n="panel.histret">Return Distribution — Historical</span> <span class="right small faint" id="hist-note"></span></div>
+            <div class="panel-body"><div class="chart-box"><canvas id="hist-chart"></canvas></div></div>
+          </section>
+
+          <section class="col-6 panel">
+            <div class="panel-head"><span data-i18n="panel.mcret">Return Distribution — Monte Carlo</span> <span class="right small faint" data-i18n="mc.sims">20,000 SIMULATIONS</span></div>
+            <div class="panel-body"><div class="chart-box"><canvas id="mc-chart"></canvas></div></div>
+          </section>
+
+          <section class="col-6 panel">
+            <div class="panel-head"><span data-i18n="panel.corr">Correlation Matrix</span></div>
+            <div class="panel-body corr-wrap" id="corr"></div>
+          </section>
+
+          <section class="col-6 panel">
+            <div class="panel-head"><span data-i18n="panel.perasset">Per-Asset Decomposition</span></div>
+            <div class="panel-body tight" style="overflow-x:auto"><table class="data" id="per-asset"></table></div>
+          </section>
+
+          <section class="col-12 panel">
+            <div class="panel-head"><span data-i18n="panel.notes">Engine Notes</span></div>
+            <div class="panel-body small muted" id="notes"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="col-12" id="run-status"></div>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● LIVE</span>
+    <span>RISK ENGINE v2 · HIST + VAR-COVAR + MONTE CARLO</span>
+    <span class="right" data-i18n="status.edu">EDUCATIONAL USE ONLY — NOT INVESTMENT ADVICE</span>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/risk.js"></script>
+</body>
+</html>

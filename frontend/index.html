@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FINANSLA TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="index.html" class="active"><b>F1</b><span data-i18n="nav.home">HOME</span></a>
+      <a href="risk.html"><b>F2</b><span data-i18n="nav.risk">RISK ENGINE</span></a>
+    </nav>
+    <div class="topsearch">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <div class="tape"><div class="tape-track" id="tape"></div></div>
+
+  <main class="wrap">
+    <div class="grid">
+      <section class="col-12">
+        <div class="bigsearch">
+          <span class="prompt">&gt;</span>
+          <input id="search" autocomplete="off" spellcheck="false" data-i18n-ph="home.search.ph"
+                 placeholder="SEARCH EQUITIES &amp; TEFAS FUNDS — e.g. THYAO, ASELS, AAPL, NNF …">
+        </div>
+        <div class="small faint" style="padding:6px 2px" data-i18n="home.hint"></div>
+      </section>
+
+      <section class="col-6 panel" id="stocks-panel" hidden>
+        <div class="panel-head"><span data-i18n="home.equities">Equities</span> <span class="right" id="stocks-count"></span></div>
+        <div class="panel-body tight" id="stocks-results"></div>
+      </section>
+
+      <section class="col-6 panel" id="funds-panel" hidden>
+        <div class="panel-head"><span data-i18n="home.funds">TEFAS Funds</span> <span class="right" id="funds-count"></span></div>
+        <div class="panel-body tight" id="funds-results"></div>
+      </section>
+
+      <section class="col-12" id="markets-section">
+        <div class="panel-head" style="border:1px solid var(--border);border-bottom:none;background:var(--panel)"><span data-i18n="home.markets">Markets Overview</span></div>
+        <div class="tiles" id="market-cards" style="border:1px solid var(--border);padding:12px;background:var(--panel);grid-template-columns:repeat(auto-fit,minmax(170px,1fr))"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● LIVE</span>
+    <span data-i18n="status.data">DATA: YAHOO FINANCE · TEFAS · GOOGLE NEWS</span>
+    <span class="right" data-i18n="status.edu">EDUCATIONAL USE ONLY — NOT INVESTMENT ADVICE</span>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+"""FINANSLA TERMINAL API — FastAPI backend.
+
+Data sources: Yahoo Finance (yfinance), TEFAS (tefas-crawler + comparison
+endpoint), Google News RSS. Run locally with:
+
+    uvicorn app.main:app --reload --port 8000
+"""
+from __future__ import annotations
+
+import concurrent.futures
+import math
+from typing import Literal, Optional
+
+import numpy as np
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+from . import news as news_mod
+from . import risk
+from . import tefas_client as tefas
+from . import yahoo
+
+# Simplifying assumptions, surfaced in every payload rather than hidden
+RF_TRY = 0.40   # TRY policy/deposit-rate proxy
+RF_USD = 0.045
+MAX_ASSETS = 10
+MC_SIMS = 20_000
+
+app = FastAPI(title="Finansla Terminal API", version="2.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+def root():
+    return {
+        "name": "FINANSLA TERMINAL API",
+        "endpoints": [
+            "/api/search?q=THYAO", "/api/quotes?symbols=XU100.IS,USDTRY=X",
+            "/api/stock?symbol=THYAO.IS", "/api/fund?code=NNF",
+            "/api/news?q=Turkish+Airlines&lang=tr", "POST /api/portfolio",
+        ],
+    }
+
+
+# ---- search --------------------------------------------------------------
+
+@app.get("/api/search")
+def api_search(q: str = Query(..., min_length=1)):
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        f_stocks = pool.submit(yahoo.search, q, 12)
+        f_funds = pool.submit(tefas.search_funds, q, 12)
+        stocks, funds = [], []
+        try:
+            stocks = f_stocks.result(timeout=15)
+        except Exception:
+            pass
+        try:
+            funds = f_funds.result(timeout=20)
+        except Exception:
+            pass
+    return {"query": q, "stocks": stocks, "funds": funds}
+
+
+# ---- quotes (ticker tape) ------------------------------------------------
+
+@app.get("/api/quotes")
+def api_quotes(symbols: str = Query(...)):
+    syms = [s.strip() for s in symbols.split(",") if s.strip()][:15]
+    return {"quotes": yahoo.quotes(syms)}
+
+
+# ---- stock detail --------------------------------------------------------
+
+@app.get("/api/stock")
+def api_stock(symbol: str = Query(...)):
+    is_turkish = symbol.upper().endswith(".IS")
+    benchmark = "XU100.IS" if is_turkish else "^GSPC"
+    rf = RF_TRY if is_turkish else RF_USD
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            f_quote = pool.submit(yahoo.full_quote, symbol)
+            f_hist = pool.submit(yahoo.price_history, symbol, "1y")
+            f_bench = pool.submit(yahoo.price_history, benchmark, "1y")
+            profile, quote = f_quote.result(timeout=30)
+            closes = f_hist.result(timeout=30)
+            try:
+                bench = f_bench.result(timeout=30)
+            except Exception:
+                bench = pd.Series(dtype=float)
+    except Exception as e:
+        raise HTTPException(502, f"Yahoo Finance error for {symbol}: {e}")
+
+    if closes.size < 30:
+        raise HTTPException(400, f"Not enough price history for {symbol}")
+
+    # Beta on aligned dates
+    bench_returns = None
+    if bench.size > 30:
+        joined = pd.concat({"a": closes, "b": bench}, axis=1, join="inner").dropna()
+        if len(joined) > 30:
+            bench_returns = risk.daily_returns(joined["b"].to_numpy())
+            asset_aligned = risk.daily_returns(joined["a"].to_numpy())
+
+    risk_metrics = risk.risk_profile(closes.to_numpy(), rf)
+    if risk_metrics is not None:
+        risk_metrics["beta"] = (
+            risk.beta(asset_aligned, bench_returns) if bench_returns is not None else None
+        )
+
+    S = quote.get("price")
+    greeks = None
+    if risk_metrics and S and S > 0:
+        greeks = risk.black_scholes(S=S, K=S, T=30 / 365, r=rf,
+                                    sigma=risk_metrics["annVolatility"])
+
+    return {
+        "profile": profile,
+        "quote": quote,
+        "history": [{"date": d, "close": float(c)} for d, c in closes.items()],
+        "risk": risk_metrics,
+        "greeks": greeks,
+        "benchmark": benchmark,
+        "assumptions": {
+            "riskFreeRate": rf,
+            "note": "Greeks are for a synthetic at-the-money European option, 30 days "
+                    "to expiry, priced with Black-Scholes using 1y realized volatility.",
+        },
+    }
+
+
+# ---- fund detail ---------------------------------------------------------
+
+@app.get("/api/fund")
+def api_fund(code: str = Query(..., min_length=2, max_length=6)):
+    df = tefas.fund_history(code, days=380)
+    if df is None or df.empty:
+        raise HTTPException(400, f'No TEFAS data found for fund code "{code.upper()}"')
+
+    try:
+        entry = next((f for f in tefas.fund_list() if f["code"] == code.upper()), None)
+    except Exception:
+        entry = None
+
+    latest = df.iloc[-1]
+    prices = df["price"].astype(float).to_numpy()
+
+    def _num(v):
+        try:
+            f = float(v)
+            return f if math.isfinite(f) else None
+        except (TypeError, ValueError):
+            return None
+
+    return {
+        "profile": {
+            "code": code.upper(),
+            "title": str(latest.get("title") or (entry or {}).get("title") or code.upper()),
+            "category": (entry or {}).get("category"),
+            "currency": "TRY",
+        },
+        "latest": {
+            "date": str(pd.Timestamp(latest["date"]).date()),
+            "price": float(latest["price"]),
+            "aum": _num(latest.get("market_cap")),
+            "investors": _num(latest.get("number_of_investors")),
+            "shares": _num(latest.get("number_of_shares")),
+        },
+        "returns": (entry or {}).get("returns"),
+        "history": [
+            {"date": str(pd.Timestamp(r["date"]).date()), "close": float(r["price"])}
+            for _, r in df.iterrows()
+        ],
+        "risk": risk.risk_profile(prices, RF_TRY),
+        "allocation": tefas.latest_allocation(df),
+        "assumptions": {"riskFreeRate": RF_TRY},
+    }
+
+
+# ---- news ----------------------------------------------------------------
+
+@app.get("/api/news")
+def api_news(q: str = Query(..., min_length=1), lang: str = "tr"):
+    try:
+        items = news_mod.google_news(q, "en" if lang == "en" else "tr", 12)
+    except Exception as e:
+        raise HTTPException(502, f"Google News error: {e}")
+    return {"query": q, "lang": lang, "items": items}
+
+
+# ---- portfolio risk engine ----------------------------------------------
+
+class Asset(BaseModel):
+    type: Literal["stock", "fund"]
+    id: str = Field(min_length=1, max_length=20)
+    weight: float = 0.0
+
+
+class PortfolioRequest(BaseModel):
+    assets: list[Asset] = Field(min_length=1, max_length=MAX_ASSETS)
+    confidence: float = 0.95
+    horizonDays: int = 1
+
+
+def _asset_series(a: Asset) -> pd.Series:
+    if a.type == "fund":
+        df = tefas.fund_history(a.id, days=380)
+        if df is None or df.empty:
+            return pd.Series(dtype=float)
+        s = df.set_index(df["date"].map(lambda d: str(pd.Timestamp(d).date())))["price"].astype(float)
+        return s
+    return yahoo.price_history(a.id, "1y")
+
+
+@app.post("/api/portfolio")
+def api_portfolio(req: PortfolioRequest):
+    confidence = 0.99 if req.confidence == 0.99 else 0.95
+    horizon = min(max(req.horizonDays, 1), 30)
+    scale = math.sqrt(horizon)
+
+    weights = np.array([max(a.weight, 0.0) for a in req.assets], dtype=float)
+    weights = weights / weights.sum() if weights.sum() > 0 else np.full(len(req.assets), 1 / len(req.assets))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(req.assets), 6)) as pool:
+        series = list(pool.map(_asset_series, req.assets))
+
+    for a, s in zip(req.assets, series):
+        if s.size < 30:
+            raise HTTPException(400, f"Not enough price history for {a.id}")
+
+    aligned = pd.concat({i: s for i, s in enumerate(series)}, axis=1, join="inner").dropna()
+    if len(aligned) < 60:
+        raise HTTPException(
+            400,
+            f"Only {len(aligned)} overlapping trading days across these assets - need at "
+            "least 60. Mixing rarely-traded instruments reduces the overlap.",
+        )
+    aligned = aligned.sort_index()
+
+    rets = aligned.to_numpy()
+    rets = rets[1:] / rets[:-1] - 1.0            # (T, n) daily return matrix
+    port_returns = rets @ weights
+
+    port_index = np.concatenate([[100.0], 100.0 * np.cumprod(1 + port_returns)])
+    mean_vec = rets.mean(axis=0)
+    cov = np.cov(rets, rowvar=False, ddof=1)
+    cov = np.atleast_2d(cov)
+    corr = np.corrcoef(rets, rowvar=False)
+    corr = np.atleast_2d(corr)
+
+    mc = risk.monte_carlo_portfolio(weights, mean_vec, cov, MC_SIMS)
+    tail_n = max(1, int(MC_SIMS * (1 - confidence)))
+    mc_sorted = np.sort(mc)
+
+    port_vol_daily = float(port_returns.std(ddof=1))
+    weighted_avg_vol = float(sum(w * rets[:, i].std(ddof=1) for i, w in enumerate(weights)))
+    s = pd.Series(port_returns)
+
+    per_asset = []
+    for i, a in enumerate(req.assets):
+        r_i = rets[:, i]
+        per_asset.append({
+            "id": a.id,
+            "type": a.type,
+            "weight": float(weights[i]),
+            "annVolatility": float(r_i.std(ddof=1) * math.sqrt(risk.TRADING_DAYS)),
+            "var95Hist": risk.historical_var(r_i, 0.95),
+            "annReturn": float(r_i.mean() * risk.TRADING_DAYS),
+            "corrToPortfolio": float(np.corrcoef(r_i, port_returns)[0, 1]),
+        })
+
+    return {
+        "inputs": {
+            "assets": [{"id": a.id, "type": a.type, "weight": float(weights[i])}
+                       for i, a in enumerate(req.assets)],
+            "confidence": confidence,
+            "horizonDays": horizon,
+            "window": {
+                "start": str(aligned.index[0]), "end": str(aligned.index[-1]),
+                "observations": int(len(port_returns)),
+            },
+            "mcSimulations": MC_SIMS,
+        },
+        "portfolio": {
+            "annReturn": float(port_returns.mean() * risk.TRADING_DAYS),
+            "annVolatility": port_vol_daily * math.sqrt(risk.TRADING_DAYS),
+            "sharpe": risk.sharpe(port_returns, RF_TRY),
+            "sortino": risk.sortino(port_returns, RF_TRY),
+            "maxDrawdown": risk.max_drawdown(port_index),
+            "skewness": float(s.skew()),
+            "excessKurtosis": float(s.kurt()),
+            "var": {
+                "historical": risk.historical_var(port_returns, confidence) * scale,
+                "parametric": risk.parametric_var(port_returns, confidence) * scale,
+                "monteCarlo": float(-np.quantile(mc, 1 - confidence)) * scale,
+                "cvarHistorical": risk.cvar(port_returns, confidence) * scale,
+                "cvarMonteCarlo": float(-mc_sorted[:tail_n].mean()) * scale,
+            },
+            "diversificationBenefit": (1 - port_vol_daily / weighted_avg_vol) if weighted_avg_vol > 0 else 0.0,
+        },
+        "perAsset": per_asset,
+        "correlationMatrix": [[float(x) for x in row] for row in corr],
+        "histograms": {
+            "historical": risk.histogram(port_returns, 41),
+            "monteCarlo": risk.histogram(mc, 61),
+        },
+        "notes": [
+            "VaR/CVaR reported as positive loss fractions over the chosen horizon (sqrt-of-time scaling).",
+            "Monte Carlo assumes multivariate normal returns with the sample covariance (Cholesky factorization).",
+            "Sharpe/Sortino use a 40% TRY risk-free proxy; cross-currency portfolios ignore FX conversion (returns are unitless).",
+        ],
+    }
