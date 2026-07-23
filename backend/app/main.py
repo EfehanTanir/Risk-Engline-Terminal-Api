@@ -180,7 +180,7 @@ def api_fund(code: str = Query(..., min_length=2, max_length=6)):
             for _, r in df.iterrows()
         ],
         "risk": risk.risk_profile(prices, RF_TRY),
-        "allocation": tefas.latest_allocation(df),
+        "allocation": tefas.latest_allocation(df, code),
         "assumptions": {"riskFreeRate": RF_TRY},
     }
 

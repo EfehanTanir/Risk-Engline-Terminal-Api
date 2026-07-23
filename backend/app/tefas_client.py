@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import datetime as dt
+import math
 import threading
 import time
 from typing import Optional
@@ -84,31 +85,87 @@ NON_ALLOCATION = INFO_COLUMNS | {
     "periodic_return", "tmm",
 }
 
+# TEFAS BindHistoryAllocation short codes -> human labels (direct-endpoint fallback)
+ALLOCATION_LABELS = {
+    "BB": "Bank Bills", "BYF": "ETFs", "D": "Other", "DB": "FX Bills",
+    "DT": "Government Bonds", "DÖT": "FX-Payable Bonds", "EUT": "Eurobonds",
+    "FB": "Fund Participation", "FKB": "Lease Certificates (Foreign)",
+    "GAS": "Real Estate Certificates", "GSYKB": "Venture Capital Inv.",
+    "GYKB": "Real Estate Inv.", "HB": "Treasury Bills", "HS": "Equities",
+    "KBA": "Precious Metal Bills", "KH": "Public Lease Certificates",
+    "KKS": "Private Lease Certificates", "KM": "Precious Metals",
+    "KMKB": "Precious Metal Lease Cert.", "OSA": "Private Sector Lease Cert.",
+    "OST": "Corporate Bonds", "R": "Repo", "T": "Bills",
+    "TPP": "FX Deposit/Participation", "TR": "Reverse Repo", "VM": "Term Deposit",
+    "VDM": "Term Deposit", "Vİ": "Derivatives", "YBA": "Foreign Bank Bills",
+    "YBOSB": "Foreign Corporate Debt", "YHS": "Foreign Equities",
+    "YMK": "Foreign Securities", "YYF": "Foreign Funds", "TDÖT": "Gov. FX Bonds",
+}
 
-def latest_allocation(df: pd.DataFrame) -> Optional[dict]:
+
+def _valid_slices(pairs) -> Optional[list[dict]]:
+    """Keep 0–100% values; accept the row only if they sum to roughly 100%."""
+    slices, total = [], 0.0
+    for code, label, value in pairs:
+        try:
+            pct = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(pct) and 0.01 < pct <= 100.0:
+            slices.append({"code": code, "label": label, "pct": pct})
+            total += pct
+    if slices and 50.0 <= total <= 150.0:
+        slices.sort(key=lambda s: -s["pct"])
+        return slices
+    return None
+
+
+def _allocation_direct(code: str) -> Optional[dict]:
+    """Fallback: query BindHistoryAllocation directly (short Turkish codes)."""
+    end = dt.date.today()
+    start = end - dt.timedelta(days=30)
+    resp = requests.post(
+        "https://www.tefas.gov.tr/api/DB/BindHistoryAllocation",
+        data={
+            "fontip": "YAT", "sfontur": "", "fonkod": code, "fongrup": "",
+            "bastarih": start.strftime("%d.%m.%Y"),
+            "bittarih": end.strftime("%d.%m.%Y"),
+            "fonturkod": "", "fonunvantip": "",
+        },
+        headers=TEFAS_HEADERS, timeout=20,
+    )
+    resp.raise_for_status()
+    rows = resp.json().get("data", [])
+    rows.sort(key=lambda r: int(r.get("TARIH") or 0))
+    skip = {"TARIH", "FONKODU", "FONUNVAN", "BilFiyat"}
+    for row in reversed(rows):
+        slices = _valid_slices(
+            (k, ALLOCATION_LABELS.get(k, k), v) for k, v in row.items() if k not in skip
+        )
+        if slices:
+            date = dt.datetime.fromtimestamp(int(row["TARIH"]) / 1000, dt.timezone.utc).date()
+            return {"date": str(date), "slices": slices}
+    return None
+
+
+def latest_allocation(df: pd.DataFrame, code: Optional[str] = None) -> Optional[dict]:
     """Asset-class percentages from the most recent row that has a valid
-    breakdown. TEFAS publishes the breakdown with a lag, so the newest rows can
-    be empty — walk backwards until the slice total looks like ~100%."""
-    import math as _math
+    breakdown. TEFAS publishes the breakdown with a lag (and tefas-crawler's
+    merged frame sometimes lacks it entirely), so walk backwards through the
+    crawler data first, then fall back to the raw TEFAS endpoint."""
     alloc_cols = [c for c in df.columns if c not in NON_ALLOCATION]
     for idx in range(len(df) - 1, max(len(df) - 20, -1), -1):
         row = df.iloc[idx]
-        slices, total = [], 0.0
-        for col in alloc_cols:
-            try:
-                pct = float(row[col])
-            except (TypeError, ValueError):
-                continue
-            if _math.isfinite(pct) and 0.01 < pct <= 100.0:
-                slices.append({
-                    "code": col,
-                    "label": col.replace("_", " ").title(),
-                    "pct": pct,
-                })
-                total += pct
-        if slices and 50.0 <= total <= 150.0:
-            slices.sort(key=lambda s: -s["pct"])
+        slices = _valid_slices(
+            (col, col.replace("_", " ").title(), row[col]) for col in alloc_cols
+        )
+        if slices:
             return {"date": str(pd.Timestamp(row["date"]).date()), "slices": slices}
+    if code:
+        try:
+            return _allocation_direct(_tr_upper(code.strip()))
+        except Exception:
+            return None
     return None
 
 
