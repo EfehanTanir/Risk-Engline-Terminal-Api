@@ -204,6 +204,24 @@ def api_news(q: str = Query(..., min_length=1), lang: str = "tr"):
     return {"query": q, "lang": lang, "items": items}
 
 
+@app.get("/api/market-news")
+def api_market_news(lang: str = "tr"):
+    """Home-page panel: Google's top business/economy headlines of the day,
+    tagged with the tickers they mention."""
+    is_en = lang == "en"
+    try:
+        items = news_mod.top_business_news("en" if is_en else "tr", 12)
+        if not items:  # topic feed empty? fall back to a market search
+            items = news_mod.google_news(
+                "stock market" if is_en else "Borsa İstanbul hisse",
+                "en" if is_en else "tr", 12)
+    except Exception as e:
+        raise HTTPException(502, f"Google News error: {e}")
+    for item in items:
+        item["tickers"] = news_mod.extract_tickers(item["title"])
+    return {"lang": lang, "items": items}
+
+
 # ---- portfolio risk engine ----------------------------------------------
 
 class Asset(BaseModel):
