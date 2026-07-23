@@ -149,6 +149,10 @@ def api_fund(code: str = Query(..., min_length=2, max_length=6)):
         entry = next((f for f in tefas.fund_list() if f["code"] == code.upper()), None)
     except Exception:
         entry = None
+    try:
+        info = tefas.fund_info(code) or {}
+    except Exception:
+        info = {}
 
     latest = df.iloc[-1]
     prices = df["price"].astype(float).to_numpy()
@@ -160,19 +164,23 @@ def api_fund(code: str = Query(..., min_length=2, max_length=6)):
         except (TypeError, ValueError):
             return None
 
+    def _first(*vals):
+        return next((v for v in vals if v is not None), None)
+
     return {
         "profile": {
             "code": code.upper(),
-            "title": str(latest.get("title") or (entry or {}).get("title") or code.upper()),
-            "category": (entry or {}).get("category"),
+            "title": str(latest.get("title") or info.get("title")
+                         or (entry or {}).get("title") or code.upper()),
+            "category": _first((entry or {}).get("category"), info.get("category")),
             "currency": "TRY",
         },
         "latest": {
             "date": str(pd.Timestamp(latest["date"]).date()),
             "price": float(latest["price"]),
-            "aum": _num(latest.get("market_cap")),
-            "investors": _num(latest.get("number_of_investors")),
-            "shares": _num(latest.get("number_of_shares")),
+            "aum": _first(_num(latest.get("market_cap")), info.get("aum")),
+            "investors": _first(_num(latest.get("number_of_investors")), info.get("investors")),
+            "shares": _first(_num(latest.get("number_of_shares")), info.get("shares")),
         },
         "returns": (entry or {}).get("returns"),
         "history": [

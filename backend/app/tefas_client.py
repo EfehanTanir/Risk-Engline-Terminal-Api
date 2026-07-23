@@ -1,12 +1,15 @@
 """TEFAS data access.
 
-Price history + portfolio allocation come through the official `tefas-crawler`
-library (which merges BindHistoryInfo and BindHistoryAllocation into one
-DataFrame with English column names). TEFAS caps each query at ~3 months, so
-long ranges are fetched in 60-day chunks.
+Price history comes through the official `tefas-crawler` library. Everything
+else uses TEFAS's current JSON API (https://www.tefas.gov.tr/api/funds/...),
+which replaced the old /api/DB form endpoints in 2026:
 
-The searchable fund universe (with period returns) comes from the
-BindComparisonFundReturns endpoint, which tefas-crawler does not wrap.
+  fonGetiriBazliBilgiGetir  -> fund universe with period returns (search)
+  fonBilgiGetir             -> live AUM / investors / shares / category
+  dagilimSiraliGetirT       -> portfolio asset-class breakdown (allocation)
+
+TEFAS caps history queries at ~3 months, so long ranges are fetched in
+parallel 60-day chunks.
 """
 from __future__ import annotations
 
@@ -31,22 +34,45 @@ def _get_crawler() -> Crawler:
         _tls.crawler = Crawler()
     return _tls.crawler
 
+
 INFO_COLUMNS = {
     "date", "price", "code", "title", "market_cap",
     "number_of_shares", "number_of_investors",
 }
 
-TEFAS_HEADERS = {
+API_BASE = "https://www.tefas.gov.tr/api/funds"
+
+JSON_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
-    "X-Requested-With": "XMLHttpRequest",
+    "Accept": "*/*",
     "Origin": "https://www.tefas.gov.tr",
-    "Referer": "https://www.tefas.gov.tr/KarsilastirmaliAnaliz.aspx",
+    "Referer": "https://www.tefas.gov.tr/tr/fon-verileri",
 }
+
+
+def _api_post(endpoint: str, payload: dict) -> list[dict]:
+    resp = requests.post(f"{API_BASE}/{endpoint}", json=payload,
+                         headers=JSON_HEADERS, timeout=25)
+    resp.raise_for_status()
+    data = resp.json()
+    if data.get("errorMessage"):
+        raise RuntimeError(f"TEFAS {endpoint}: {data['errorMessage']}")
+    return data.get("resultList") or []
 
 
 def _tr_upper(s: str) -> str:
     return s.replace("i", "İ").replace("ı", "I").upper()
 
+
+def _num_or_none(v):
+    try:
+        f = float(v)
+        return f if math.isfinite(f) else None
+    except (TypeError, ValueError):
+        return None
+
+
+# ---- Price history (tefas-crawler) --------------------------------------
 
 def _fetch_chunk(code: str, start: dt.date, end: dt.date) -> Optional[pd.DataFrame]:
     try:
@@ -57,8 +83,8 @@ def _fetch_chunk(code: str, start: dt.date, end: dt.date) -> Optional[pd.DataFra
 
 
 def fund_history(code: str, days: int = 380) -> Optional[pd.DataFrame]:
-    """1Y-ish merged info+allocation history, fetched as parallel 60-day chunks
-    to respect TEFAS's ~3-month query limit while staying fast on serverless."""
+    """1Y-ish price history, fetched as parallel 60-day chunks to respect
+    TEFAS's ~3-month query limit while staying fast on serverless."""
     code = _tr_upper(code.strip())
     end = dt.date.today()
     start = end - dt.timedelta(days=days)
@@ -79,27 +105,59 @@ def fund_history(code: str, days: int = 380) -> Optional[pd.DataFrame]:
     return df if len(df) else None
 
 
+# ---- Live fund info (AUM, investors, category) ---------------------------
+
+def fund_info(code: str) -> Optional[dict]:
+    rows = _api_post("fonBilgiGetir", {"fonKodu": _tr_upper(code.strip()), "dil": "TR"})
+    if not rows:
+        return None
+    r = rows[0]
+    return {
+        "title": r.get("fonUnvan"),
+        "price": _num_or_none(r.get("sonFiyat")),
+        "dailyReturn": _num_or_none(r.get("gunlukGetiri")),
+        "aum": _num_or_none(r.get("portBuyukluk")),
+        "investors": _num_or_none(r.get("yatirimciSayi")),
+        "shares": _num_or_none(r.get("payAdet")),
+        "category": r.get("fonKategori"),
+        "categoryRank": _num_or_none(r.get("kategoriDerece")),
+        "categoryCount": _num_or_none(r.get("kategoriFonSay")),
+        "marketShare": _num_or_none(r.get("pazarPayi")),
+    }
+
+
+# ---- Portfolio allocation ------------------------------------------------
+
+# dagilimSiraliGetirT column codes -> human labels (codes arrive lowercase)
+ALLOCATION_LABELS = {
+    "BB": "Bank Bills", "BPP": "Exchange Money Market", "BYF": "ETFs",
+    "D": "Other", "DB": "FX Bills", "DT": "Government Bonds",
+    "DOT": "FX-Payable Gov. Bonds", "EUT": "Eurobonds", "FB": "Fund Participation",
+    "FKB": "Foreign Lease Certificates", "GAS": "Real Estate Certificates",
+    "GSYKB": "Venture Capital Funds", "GSYY": "Venture Capital Trusts",
+    "GYKB": "Real Estate Funds", "GYY": "Real Estate Trusts",
+    "HB": "Treasury Bills", "HS": "Equities", "KBA": "Precious Metal Bills",
+    "KH": "Public Lease Certificates", "KHAU": "Public Lease Cert. (Gold)",
+    "KHD": "Public Lease Cert. (FX)", "KHTL": "Public Lease Cert. (TL)",
+    "KKS": "Private Lease Certificates", "KKSD": "Private Lease Cert. (FX)",
+    "KKSTL": "Private Lease Cert. (TL)", "KKSYD": "Private Lease Cert. (Foreign)",
+    "KM": "Precious Metals", "KMBYF": "Precious Metal ETFs",
+    "KMKBA": "Precious Metal Bills", "KMKKS": "Precious Metal Lease Cert.",
+    "OSKS": "Private Sector Lease Cert.", "OST": "Corporate Bonds",
+    "OSDB": "Private Sector Foreign Debt", "R": "Repo", "T": "Bills",
+    "TPP": "FX Deposit/Participation", "TR": "Reverse Repo",
+    "VDM": "Term Deposit", "VM": "Term Deposit", "VMAU": "Term Deposit (Gold)",
+    "VMD": "Term Deposit (FX)", "VMTL": "Term Deposit (TL)",
+    "VINT": "Futures Cash Collateral", "YBA": "Foreign Bank Bills",
+    "YBKB": "Foreign Public Debt", "YBOSB": "Foreign Corporate Debt",
+    "YBYF": "Foreign ETFs", "YHS": "Foreign Equities",
+    "YMK": "Foreign Securities", "YYF": "Foreign Funds",
+}
+
 # Columns tefas-crawler returns that are NOT asset-class percentages
 NON_ALLOCATION = INFO_COLUMNS | {
     "category_total", "category_rank", "rank", "market_share",
     "periodic_return", "tmm",
-}
-
-# TEFAS BindHistoryAllocation short codes -> human labels (direct-endpoint fallback)
-ALLOCATION_LABELS = {
-    "BB": "Bank Bills", "BYF": "ETFs", "D": "Other", "DB": "FX Bills",
-    "DT": "Government Bonds", "DÖT": "FX-Payable Bonds", "EUT": "Eurobonds",
-    "FB": "Fund Participation", "FKB": "Lease Certificates (Foreign)",
-    "GAS": "Real Estate Certificates", "GSYKB": "Venture Capital Inv.",
-    "GYKB": "Real Estate Inv.", "HB": "Treasury Bills", "HS": "Equities",
-    "KBA": "Precious Metal Bills", "KH": "Public Lease Certificates",
-    "KKS": "Private Lease Certificates", "KM": "Precious Metals",
-    "KMKB": "Precious Metal Lease Cert.", "OSA": "Private Sector Lease Cert.",
-    "OST": "Corporate Bonds", "R": "Repo", "T": "Bills",
-    "TPP": "FX Deposit/Participation", "TR": "Reverse Repo", "VM": "Term Deposit",
-    "VDM": "Term Deposit", "Vİ": "Derivatives", "YBA": "Foreign Bank Bills",
-    "YBOSB": "Foreign Corporate Debt", "YHS": "Foreign Equities",
-    "YMK": "Foreign Securities", "YYF": "Foreign Funds", "TDÖT": "Gov. FX Bonds",
 }
 
 
@@ -107,11 +165,8 @@ def _valid_slices(pairs) -> Optional[list[dict]]:
     """Keep 0–100% values; accept the row only if they sum to roughly 100%."""
     slices, total = [], 0.0
     for code, label, value in pairs:
-        try:
-            pct = float(value)
-        except (TypeError, ValueError):
-            continue
-        if math.isfinite(pct) and 0.01 < pct <= 100.0:
+        pct = _num_or_none(value)
+        if pct is not None and 0.01 < pct <= 100.0:
             slices.append({"code": code, "label": label, "pct": pct})
             total += pct
     if slices and 50.0 <= total <= 150.0:
@@ -121,38 +176,34 @@ def _valid_slices(pairs) -> Optional[list[dict]]:
 
 
 def _allocation_direct(code: str) -> Optional[dict]:
-    """Fallback: query BindHistoryAllocation directly (short Turkish codes)."""
+    """Query dagilimSiraliGetirT for the fund's latest asset-class breakdown."""
     end = dt.date.today()
-    start = end - dt.timedelta(days=30)
-    resp = requests.post(
-        "https://www.tefas.gov.tr/api/DB/BindHistoryAllocation",
-        data={
-            "fontip": "YAT", "sfontur": "", "fonkod": code, "fongrup": "",
-            "bastarih": start.strftime("%d.%m.%Y"),
-            "bittarih": end.strftime("%d.%m.%Y"),
-            "fonturkod": "", "fonunvantip": "",
-        },
-        headers=TEFAS_HEADERS, timeout=20,
-    )
-    resp.raise_for_status()
-    rows = resp.json().get("data", [])
-    rows.sort(key=lambda r: int(r.get("TARIH") or 0))
-    skip = {"TARIH", "FONKODU", "FONUNVAN", "BilFiyat"}
+    start = end - dt.timedelta(days=9)
+    payload = {
+        "fonTipi": "YAT", "fonKodu": None, "aramaMetni": None,
+        "fonTurKod": None, "fonGrubu": None, "sfonTurKod": None,
+        "fonTurAciklama": None, "kurucuKod": None,
+        "basTarih": start.strftime("%Y%m%d"), "bitTarih": end.strftime("%Y%m%d"),
+        "basSira": 1, "bitSira": 100000, "dil": "TR",
+        "fonKod": code, "fonGrup": "", "fonUnvanTip": "",
+    }
+    rows = [r for r in _api_post("dagilimSiraliGetirT", payload)
+            if r.get("fonKodu") == code]
+    rows.sort(key=lambda r: r.get("tarih") or "")
+    skip = {"fonKodu", "fonUnvan", "tarih", "bilFiyat"}
     for row in reversed(rows):
         slices = _valid_slices(
-            (k, ALLOCATION_LABELS.get(k, k), v) for k, v in row.items() if k not in skip
+            (k.upper(), ALLOCATION_LABELS.get(k.upper(), k.upper()), v)
+            for k, v in row.items() if k not in skip
         )
         if slices:
-            date = dt.datetime.fromtimestamp(int(row["TARIH"]) / 1000, dt.timezone.utc).date()
-            return {"date": str(date), "slices": slices}
+            return {"date": str(row.get("tarih")), "slices": slices}
     return None
 
 
 def latest_allocation(df: pd.DataFrame, code: Optional[str] = None) -> Optional[dict]:
-    """Asset-class percentages from the most recent row that has a valid
-    breakdown. TEFAS publishes the breakdown with a lag (and tefas-crawler's
-    merged frame sometimes lacks it entirely), so walk backwards through the
-    crawler data first, then fall back to the raw TEFAS endpoint."""
+    """Asset-class percentages: try tefas-crawler's merged frame first (older
+    library versions include breakdown columns), then the direct endpoint."""
     alloc_cols = [c for c in df.columns if c not in NON_ALLOCATION]
     for idx in range(len(df) - 1, max(len(df) - 20, -1), -1):
         row = df.iloc[idx]
@@ -175,14 +226,6 @@ _fund_list_cache: dict = {"t": 0.0, "data": None}
 _fund_list_lock = threading.Lock()
 
 
-def _num_or_none(v):
-    try:
-        f = float(v)
-        return f if f == f else None  # NaN check
-    except (TypeError, ValueError):
-        return None
-
-
 def fund_list() -> list[dict]:
     now = time.time()
     if _fund_list_cache["data"] is not None and now - _fund_list_cache["t"] < 6 * 3600:
@@ -190,36 +233,33 @@ def fund_list() -> list[dict]:
     with _fund_list_lock:
         if _fund_list_cache["data"] is not None and now - _fund_list_cache["t"] < 6 * 3600:
             return _fund_list_cache["data"]
-        end = dt.date.today()
-        start = end - dt.timedelta(days=7)
-        body = {
-            "calismatipi": "2", "fontip": "YAT", "sfontur": "", "kurucukod": "",
-            "fongrup": "", "bastarih": start.strftime("%d.%m.%Y"),
-            "bittarih": end.strftime("%d.%m.%Y"), "fonturkod": "",
-            "fonunvantip": "", "strperiod": "1,1,1,1,1,1,1", "islemdurum": "1",
+        payload = {
+            "dil": "TR", "fonTipi": "YAT", "kurucuKodu": None,
+            "sfonTurKod": None, "fonTurAciklama": None, "islem": 1,
+            "fonTurKod": None, "fonGrubu": None,
+            "donemGetiri1a": "1", "donemGetiri3a": "1", "donemGetiri6a": "1",
+            "donemGetiri1y": "1", "donemGetiriyb": "1", "donemGetiri3y": "1",
+            "donemGetiri5y": "1", "basTarih": None, "bitTarih": None,
+            "calismaTipi": 2, "getiriOrani": "1",
         }
-        resp = requests.post(
-            "https://www.tefas.gov.tr/api/DB/BindComparisonFundReturns",
-            data=body, headers=TEFAS_HEADERS, timeout=20,
-        )
-        resp.raise_for_status()
-        rows = resp.json().get("data", [])
+        rows = _api_post("fonGetiriBazliBilgiGetir", payload)
         data = []
         for r in rows:
-            if not r.get("FONKODU"):
+            if not r.get("fonKodu"):
                 continue
             data.append({
-                "code": r["FONKODU"],
-                "title": r.get("FONUNVAN"),
-                "category": r.get("FONTURACIKLAMA"),
+                "code": r["fonKodu"],
+                "title": r.get("fonUnvan"),
+                "category": r.get("fonTurAciklama"),
+                "riskValue": r.get("riskDegeri"),
                 "returns": {
-                    "1m": _num_or_none(r.get("GETIRI1A")),
-                    "3m": _num_or_none(r.get("GETIRI3A")),
-                    "6m": _num_or_none(r.get("GETIRI6A")),
-                    "ytd": _num_or_none(r.get("GETIRIYB", r.get("GETIRIYIL"))),
-                    "1y": _num_or_none(r.get("GETIRI1Y")),
-                    "3y": _num_or_none(r.get("GETIRI3Y")),
-                    "5y": _num_or_none(r.get("GETIRI5Y")),
+                    "1m": _num_or_none(r.get("getiri1a")),
+                    "3m": _num_or_none(r.get("getiri3a")),
+                    "6m": _num_or_none(r.get("getiri6a")),
+                    "ytd": _num_or_none(r.get("getiriyb")),
+                    "1y": _num_or_none(r.get("getiri1y")),
+                    "3y": _num_or_none(r.get("getiri3y")),
+                    "5y": _num_or_none(r.get("getiri5y")),
                 },
             })
         _fund_list_cache.update(t=now, data=data)
