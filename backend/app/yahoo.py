@@ -14,16 +14,22 @@ STOCK_TYPES = {"EQUITY", "ETF", "INDEX", "CURRENCY", "CRYPTOCURRENCY", "MUTUALFU
 _UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 
 
+# Equities first so index derivatives never drown out the actual stock
+_TYPE_ORDER = {"EQUITY": 0, "ETF": 1, "MUTUALFUND": 2, "CRYPTOCURRENCY": 3,
+               "CURRENCY": 4, "INDEX": 5}
+
+
 def search(q: str, count: int = 12) -> list[dict]:
+    fetch_n = max(count * 2, 25)  # over-fetch, then rank
     quotes = []
     try:
-        s = yf.Search(q, max_results=count, news_count=0)
+        s = yf.Search(q, max_results=fetch_n, news_count=0)
         quotes = s.quotes or []
     except Exception:
         try:
             r = requests.get(
                 "https://query2.finance.yahoo.com/v1/finance/search",
-                params={"q": q, "quotesCount": count, "newsCount": 0},
+                params={"q": q, "quotesCount": fetch_n, "newsCount": 0},
                 headers=_UA, timeout=10,
             )
             quotes = r.json().get("quotes", [])
@@ -34,6 +40,8 @@ def search(q: str, count: int = 12) -> list[dict]:
         sym = x.get("symbol")
         if not sym or x.get("quoteType") not in STOCK_TYPES:
             continue
+        if "_" in sym:  # BIST hedged/currency index variants - pure noise
+            continue
         out.append({
             "symbol": sym,
             "name": x.get("longname") or x.get("shortname") or sym,
@@ -41,7 +49,9 @@ def search(q: str, count: int = 12) -> list[dict]:
             "type": x.get("quoteType"),
             "isTurkish": bool(re.search(r"\.IS$", sym)),
         })
-    return out
+    # Stable sort keeps Yahoo's relevance order within each type
+    out.sort(key=lambda r: _TYPE_ORDER.get(r["type"], 9))
+    return out[:count]
 
 
 def _safe_info(ticker: yf.Ticker) -> dict:
