@@ -91,8 +91,8 @@
     document.getElementById('wn-ok').addEventListener('click', close);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
 
-    // Auto-open once when a new release is detected
-    if (unseen) setTimeout(open, 900);
+    // No auto-open: the blinking badge invites a click; the panel only opens
+    // when the user actually clicks it. The dot clears once they've opened it.
   }
 
   if (document.readyState === 'loading') {
