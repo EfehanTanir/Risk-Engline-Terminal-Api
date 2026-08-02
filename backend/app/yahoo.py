@@ -96,6 +96,27 @@ def quotes(symbols: list[str]) -> list[dict]:
     return [r for r in results if r]
 
 
+def light_quote(symbol: str) -> Optional[dict]:
+    """Fast fast_info-only quote (no heavy .info) for the sector heatmap where
+    many symbols are fetched at once and only price/change is needed."""
+    try:
+        fi = dict(yf.Ticker(symbol).fast_info)
+        price = fi.get("lastPrice")
+        prev = fi.get("previousClose")
+        if price is None or not prev:
+            return None
+        return {"symbol": symbol, "price": float(price),
+                "changePercent": (price - prev) / prev * 100}
+    except Exception:
+        return None
+
+
+def light_quotes(symbols: list[str]) -> dict:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
+        results = pool.map(light_quote, symbols)
+    return {s: r for s, r in zip(symbols, results) if r}
+
+
 def price_history(symbol: str, period: str = "1y") -> pd.Series:
     """Daily closes indexed by ISO date string."""
     df = yf.Ticker(symbol).history(period=period, interval="1d", auto_adjust=True)

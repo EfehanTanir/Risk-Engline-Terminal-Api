@@ -9,6 +9,8 @@
   let fullHistory = [];
   let priceChart = null;
 
+  const RANGE_LABELS = { 30: '1M', 90: '3M', 180: '6M', 365: '1Y' };
+
   function renderChart(days) {
     const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
     const slice = fullHistory.filter((h) => h.date >= cutoff);
@@ -17,6 +19,16 @@
     const color = last >= first ? UI.COLORS.green : UI.COLORS.red;
     priceChart = UI.priceChart(document.getElementById('price-chart'),
       slice.map((h) => h.date), slice.map((h) => h.close), { color, currency: 'TRY' });
+
+    // Show the selected range's return next to the NAV
+    if (slice.length > 1) {
+      const chg = last - first;
+      const pct = (last / first - 1) * 100;
+      document.getElementById('range-lbl').textContent = RANGE_LABELS[days] || `${days}D`;
+      const rc = document.getElementById('range-chg');
+      rc.textContent = `${chg > 0 ? '+' : ''}${UI.fmtNum(chg, last < 10 ? 4 : 2)} (${UI.fmtPctRaw(pct)})`;
+      rc.className = `chg mono-num ${UI.chgClass(chg)}`;
+    }
   }
 
   function statRow(k, v, cls = '') {
@@ -41,8 +53,15 @@
     // Identity: fund code with the fund's full title underneath
     document.getElementById('code').textContent = profile.code;
     document.getElementById('fullname').textContent = profile.title;
-    document.getElementById('tags').innerHTML = ['TEFAS', profile.category]
-      .filter(Boolean).map((x) => `<span class="tag">${UI.esc(x)}</span>`).join('');
+    // SERBEST (hedge) funds are restricted to qualified investors in Turkey -
+    // flag them with a red tag so nobody mistakes them for retail products.
+    const isSerbest = /SERBEST/i.test(`${profile.category || ''} ${profile.title || ''}`);
+    document.getElementById('tags').innerHTML = [
+      '<span class="tag">TEFAS</span>',
+      profile.category
+        ? `<span class="tag${isSerbest ? ' danger' : ''}">${UI.esc(profile.category)}${isSerbest ? ' · ' + t('tag.qualified') : ''}</span>`
+        : (isSerbest ? `<span class="tag danger">${t('tag.qualified')}</span>` : ''),
+    ].join('');
     document.getElementById('px').textContent = UI.fmtNum(latest.price, latest.price < 10 ? 6 : 4);
     document.getElementById('navdate').textContent = `${t('asof')}: ${latest.date}`;
 

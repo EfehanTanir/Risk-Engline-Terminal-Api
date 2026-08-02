@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SCREENER — FINANSLA TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="index.html"><b>F1</b><span data-i18n="nav.home">HOME</span></a>
+      <a href="risk.html"><b>F2</b><span data-i18n="nav.risk">RISK ENGINE</span></a>
+      <a href="compare.html"><b>F3</b><span data-i18n="nav.comp">COMPARE</span></a>
+      <a href="screener.html" class="active"><b>F4</b><span data-i18n="nav.screen">SCREENER</span></a>
+      <a href="heatmap.html"><b>F5</b><span data-i18n="nav.heat">HEATMAP</span></a>
+    </nav>
+    <div class="topsearch">
+      <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="identity" style="padding-bottom:8px">
+      <div>
+        <div class="code" style="font-size:26px" data-i18n="scr.title">TEFAS FUND SCREENER</div>
+        <div class="fullname" data-i18n="scr.subtitle"></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="col-12 panel">
+        <div class="filters">
+          <input id="f-text" type="text" data-i18n-ph="scr.filter" placeholder="FILTER BY CODE OR NAME…" autocomplete="off" spellcheck="false">
+          <label class="small muted"><span data-i18n="scr.cat">CATEGORY</span>
+            <select id="f-cat"></select>
+          </label>
+          <label class="small muted"><span data-i18n="scr.minrisk">MIN RISK</span>
+            <select id="f-rmin"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option></select>
+          </label>
+          <label class="small muted"><span data-i18n="scr.maxrisk">MAX RISK</span>
+            <select id="f-rmax"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7" selected>7</option></select>
+          </label>
+          <span class="small faint" id="count" style="margin-left:auto"></span>
+        </div>
+        <div class="panel-body tight" style="overflow-x:auto">
+          <table class="data" id="tbl"><tr><td class="faint" style="text-align:left;padding:16px"><span class="loading" data-i18n="searching">SEARCHING</span></td></tr></table>
+        </div>
+        <div class="small faint" style="padding:10px 12px;border-top:1px solid var(--border)" data-i18n="scr.note"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● LIVE</span>
+    <span data-i18n="status.data">DATA: YAHOO FINANCE · TEFAS · GOOGLE NEWS</span>
+    <span class="right" data-i18n="status.edu">EDUCATIONAL USE ONLY — NOT INVESTMENT ADVICE</span>
+  </footer>
+
+  <div class="disclaimer" data-i18n="legal.text"></div>
+
+  <script src="js/config.js?v=8"></script>
+  <script src="js/i18n.js?v=8"></script>
+  <script src="js/api.js?v=8"></script>
+  <script src="js/ui.js?v=8"></script>
+  <script src="js/screener.js?v=8"></script>
+  <script src="js/whatsnew.js?v=8"></script>
+</body>
+</html>

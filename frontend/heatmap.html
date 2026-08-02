@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HEATMAP — FINANSLA TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="index.html"><b>F1</b><span data-i18n="nav.home">HOME</span></a>
+      <a href="risk.html"><b>F2</b><span data-i18n="nav.risk">RISK ENGINE</span></a>
+      <a href="compare.html"><b>F3</b><span data-i18n="nav.comp">COMPARE</span></a>
+      <a href="screener.html"><b>F4</b><span data-i18n="nav.screen">SCREENER</span></a>
+      <a href="heatmap.html" class="active"><b>F5</b><span data-i18n="nav.heat">HEATMAP</span></a>
+    </nav>
+    <div class="topsearch">
+      <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="identity" style="padding-bottom:8px">
+      <div>
+        <div class="code" style="font-size:26px" data-i18n="heat.title">MARKET MAP</div>
+        <div class="fullname" data-i18n="heat.subtitle"></div>
+      </div>
+      <div class="pricebox" style="margin-left:auto">
+        <div class="small muted" style="display:flex;gap:10px;align-items:center;justify-content:flex-end">
+          <span class="down">■</span> <span data-i18n="heat.down">DOWN</span>
+          <span class="neu">■</span> 0%
+          <span class="up">■</span> <span data-i18n="heat.up">UP</span>
+        </div>
+        <div class="asof small faint" id="asof"></div>
+      </div>
+    </div>
+
+    <div id="heatmap"><div class="loading" data-i18n="searching">SEARCHING</div></div>
+    <div class="small faint" style="padding:12px 2px" data-i18n="heat.legend"></div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● LIVE</span>
+    <span data-i18n="status.data">DATA: YAHOO FINANCE · TEFAS · GOOGLE NEWS</span>
+    <span class="right" data-i18n="status.edu">EDUCATIONAL USE ONLY — NOT INVESTMENT ADVICE</span>
+  </footer>
+
+  <div class="disclaimer" data-i18n="legal.text"></div>
+
+  <script src="js/config.js?v=8"></script>
+  <script src="js/i18n.js?v=8"></script>
+  <script src="js/api.js?v=8"></script>
+  <script src="js/ui.js?v=8"></script>
+  <script src="js/heatmap.js?v=8"></script>
+  <script src="js/whatsnew.js?v=8"></script>
+</body>
+</html>

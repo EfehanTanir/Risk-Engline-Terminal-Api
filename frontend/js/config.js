@@ -5,7 +5,7 @@
 // You can also override at runtime from the browser console:
 //   localStorage.setItem('finansla_api_base', 'https://my-api.vercel.app/api')
 (function () {
-  const BACKEND_PROD = 'https://finansla-api.vercel.app/api'; // <-- CHANGE AFTER DEPLOY
+  const BACKEND_PROD = 'https://risk-engline-terminal-api.vercel.app/api';
   const BACKEND_DEV = 'http://localhost:8000/api';              // uvicorn default port
   const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname) || location.protocol === 'file:';
   window.FINANSLA = {

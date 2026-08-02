@@ -6,7 +6,7 @@
   <title>EQUITY — FINANSLA TERMINAL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/terminal.css">
+  <link rel="stylesheet" href="css/terminal.css?v=8">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
@@ -16,6 +16,9 @@
     <nav class="topnav">
       <a href="index.html"><b>F1</b><span data-i18n="nav.home">HOME</span></a>
       <a href="risk.html"><b>F2</b><span data-i18n="nav.risk">RISK ENGINE</span></a>
+      <a href="compare.html"><b>F3</b><span data-i18n="nav.comp">COMPARE</span></a>
+      <a href="screener.html"><b>F4</b><span data-i18n="nav.screen">SCREENER</span></a>
+      <a href="heatmap.html"><b>F5</b><span data-i18n="nav.heat">HEATMAP</span></a>
     </nav>
     <div class="topsearch">
       <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
@@ -36,7 +39,13 @@
         </div>
         <div class="pricebox">
           <div class="px mono-num" id="px"></div>
-          <div class="chg mono-num" id="chg"></div>
+          <div class="chg-row">
+            <span class="small muted" data-i18n="lbl.daily">DAILY</span>
+            <span class="chg mono-num" id="chg"></span>
+            <span class="faint">·</span>
+            <span class="small muted" id="range-lbl"></span>
+            <span class="chg mono-num" id="range-chg"></span>
+          </div>
           <div class="asof" id="asof"></div>
         </div>
       </div>
@@ -98,10 +107,13 @@
     <span class="right" data-i18n="status.edu">EDUCATIONAL USE ONLY — NOT INVESTMENT ADVICE</span>
   </footer>
 
-  <script src="js/config.js"></script>
-  <script src="js/i18n.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/stock.js"></script>
+  <div class="disclaimer" data-i18n="legal.text"></div>
+
+  <script src="js/config.js?v=8"></script>
+  <script src="js/i18n.js?v=8"></script>
+  <script src="js/api.js?v=8"></script>
+  <script src="js/ui.js?v=8"></script>
+  <script src="js/stock.js?v=8"></script>
+  <script src="js/whatsnew.js?v=8"></script>
 </body>
 </html>

@@ -137,6 +137,44 @@ def api_stock(symbol: str = Query(...)):
     }
 
 
+# ---- BIST sector heatmap -------------------------------------------------
+
+# Curated liquid BIST names grouped by sector for the market map. (symbol, code)
+BIST_SECTORS = {
+    "Bankacılık": [("GARAN.IS", "GARAN"), ("AKBNK.IS", "AKBNK"), ("YKBNK.IS", "YKBNK"),
+                   ("ISCTR.IS", "ISCTR"), ("VAKBN.IS", "VAKBN"), ("HALKB.IS", "HALKB")],
+    "Holding": [("KCHOL.IS", "KCHOL"), ("SAHOL.IS", "SAHOL"), ("DOHOL.IS", "DOHOL"),
+                ("ALARK.IS", "ALARK"), ("ENKAI.IS", "ENKAI")],
+    "Sanayi & Kimya": [("EREGL.IS", "EREGL"), ("KRDMD.IS", "KRDMD"), ("SASA.IS", "SASA"),
+                       ("PETKM.IS", "PETKM"), ("TUPRS.IS", "TUPRS"), ("HEKTS.IS", "HEKTS"),
+                       ("GUBRF.IS", "GUBRF")],
+    "Otomotiv & Dayanıklı": [("FROTO.IS", "FROTO"), ("TOASO.IS", "TOASO"),
+                             ("ARCLK.IS", "ARCLK"), ("VESTL.IS", "VESTL")],
+    "Perakende & Gıda": [("BIMAS.IS", "BIMAS"), ("MGROS.IS", "MGROS"), ("SOKM.IS", "SOKM"),
+                         ("ULKER.IS", "ULKER"), ("CCOLA.IS", "CCOLA")],
+    "Ulaştırma & Teknoloji": [("THYAO.IS", "THYAO"), ("PGSUS.IS", "PGSUS"), ("TAVHL.IS", "TAVHL"),
+                              ("ASELS.IS", "ASELS"), ("TCELL.IS", "TCELL"), ("TTKOM.IS", "TTKOM")],
+}
+
+
+@app.get("/api/heatmap")
+def api_heatmap():
+    """BIST daily-change heatmap grouped by sector."""
+    all_syms = [sym for stocks in BIST_SECTORS.values() for sym, _ in stocks]
+    quotes = yahoo.light_quotes(all_syms)
+    sectors = []
+    for sector, stocks in BIST_SECTORS.items():
+        arr = []
+        for sym, code in stocks:
+            q = quotes.get(sym)
+            if q:
+                arr.append({"symbol": sym, "code": code,
+                            "price": q["price"], "changePercent": q["changePercent"]})
+        if arr:
+            sectors.append({"sector": sector, "stocks": arr})
+    return {"sectors": sectors}
+
+
 # ---- fund universe (screener) -------------------------------------------
 
 @app.get("/api/funds")

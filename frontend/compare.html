@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>COMPARE — FINANSLA TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css?v=8">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="index.html"><b>F1</b><span data-i18n="nav.home">HOME</span></a>
+      <a href="risk.html"><b>F2</b><span data-i18n="nav.risk">RISK ENGINE</span></a>
+      <a href="compare.html" class="active"><b>F3</b><span data-i18n="nav.comp">COMPARE</span></a>
+      <a href="screener.html"><b>F4</b><span data-i18n="nav.screen">SCREENER</span></a>
+      <a href="heatmap.html"><b>F5</b><span data-i18n="nav.heat">HEATMAP</span></a>
+    </nav>
+    <div class="topsearch">
+      <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="identity" style="padding-bottom:8px">
+      <div>
+        <div class="code" style="font-size:26px" data-i18n="comp.title">ASSET COMPARISON</div>
+        <div class="fullname" data-i18n="comp.subtitle"></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="col-12 panel">
+        <div class="panel-body" style="padding:12px">
+          <div style="position:relative">
+            <input id="asset-search" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="risk.addph"
+                   placeholder="ADD ASSET — search equities &amp; TEFAS funds…"
+                   style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--ink);font-family:var(--mono);font-size:12px;padding:8px 10px;outline:none">
+            <div class="dropdown" id="asset-dropdown" hidden></div>
+          </div>
+          <div id="asset-list" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"></div>
+          <div class="small faint" style="margin-top:8px" data-i18n="comp.hint"></div>
+        </div>
+      </section>
+
+      <section class="col-8 panel">
+        <div class="panel-head"><span data-i18n="comp.chart">Performance — Indexed to 100</span>
+          <span class="right" id="range-btns">
+            <button class="btn" data-days="30">1M</button>
+            <button class="btn" data-days="90">3M</button>
+            <button class="btn" data-days="180">6M</button>
+            <button class="btn active" data-days="365">1Y</button>
+          </span>
+        </div>
+        <div class="panel-body"><div class="chart-box tall"><canvas id="comp-chart"></canvas></div></div>
+      </section>
+
+      <section class="col-4 panel">
+        <div class="panel-head"><span data-i18n="panel.corr">Correlation Matrix</span></div>
+        <div class="panel-body corr-wrap" id="corr"><div class="small faint" data-i18n="comp.empty"></div></div>
+      </section>
+
+      <section class="col-12 panel">
+        <div class="panel-head"><span data-i18n="comp.metrics">Comparative Metrics</span> <span class="right small faint" data-i18n="risk.window">1Y DAILY</span></div>
+        <div class="panel-body tight" style="overflow-x:auto"><table class="data" id="metrics"></table></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● LIVE</span>
+    <span data-i18n="status.data">DATA: YAHOO FINANCE · TEFAS · GOOGLE NEWS</span>
+    <span class="right" data-i18n="status.edu">EDUCATIONAL USE ONLY — NOT INVESTMENT ADVICE</span>
+  </footer>
+
+  <div class="disclaimer" data-i18n="legal.text"></div>
+
+  <script src="js/config.js?v=8"></script>
+  <script src="js/i18n.js?v=8"></script>
+  <script src="js/api.js?v=8"></script>
+  <script src="js/ui.js?v=8"></script>
+  <script src="js/compare.js?v=8"></script>
+  <script src="js/whatsnew.js?v=8"></script>
+</body>
+</html>

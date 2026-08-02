@@ -10,6 +10,8 @@
   let priceChart = null;
   let currency = '';
 
+  const RANGE_LABELS = { 30: '1M', 90: '3M', 180: '6M', 365: '1Y' };
+
   function renderChart(days) {
     const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
     const slice = fullHistory.filter((h) => h.date >= cutoff);
@@ -18,6 +20,16 @@
     const color = last >= first ? UI.COLORS.green : UI.COLORS.red;
     priceChart = UI.priceChart(document.getElementById('price-chart'),
       slice.map((h) => h.date), slice.map((h) => h.close), { color, currency });
+
+    // Show the selected range's return next to the daily change
+    if (slice.length > 1) {
+      const chg = last - first;
+      const pct = (last / first - 1) * 100;
+      document.getElementById('range-lbl').textContent = RANGE_LABELS[days] || `${days}D`;
+      const rc = document.getElementById('range-chg');
+      rc.textContent = `${chg > 0 ? '+' : ''}${UI.fmtNum(chg)} (${UI.fmtPctRaw(pct)})`;
+      rc.className = `chg mono-num ${UI.chgClass(chg)}`;
+    }
   }
 
   function statRow(k, v, cls = '') {
@@ -53,8 +65,10 @@
     document.getElementById('chg').textContent =
       `${quote.change > 0 ? '+' : ''}${UI.fmtNum(quote.change)} (${UI.fmtPctRaw(quote.changePercent)})`;
     document.getElementById('chg').classList.add(cls);
-    document.getElementById('asof').textContent =
-      `${t('market')} ${quote.marketState || ''} · ${new Date().toLocaleString(I18N.lang === 'tr' ? 'tr-TR' : 'en-US')}`;
+    const isOpen = quote.marketState === 'REGULAR';
+    document.getElementById('asof').innerHTML =
+      `<span class="mkt-badge ${isOpen ? 'open' : 'closed'}">${t(isOpen ? 'mkt.open' : 'mkt.closed')}</span> · ` +
+      `${new Date().toLocaleString(I18N.lang === 'tr' ? 'tr-TR' : 'en-US')}`;
 
     // Key statistics
     document.getElementById('stats').innerHTML = [
