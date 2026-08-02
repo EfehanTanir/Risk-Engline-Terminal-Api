@@ -117,6 +117,30 @@ def light_quotes(symbols: list[str]) -> dict:
     return {s: r for s, r in zip(symbols, results) if r}
 
 
+def market_changes(symbols: list[str]) -> dict:
+    """Daily % change (last close vs previous close) for many symbols in ONE
+    batched download — fast and rate-limit-friendly for the heatmap universe."""
+    if not symbols:
+        return {}
+    try:
+        data = yf.download(" ".join(symbols), period="5d", interval="1d",
+                           group_by="ticker", auto_adjust=True, threads=True,
+                           progress=False)
+    except Exception:
+        return light_quotes(symbols)  # fallback to per-symbol fast_info
+    out = {}
+    for sym in symbols:
+        try:
+            closes = data[sym]["Close"].dropna() if sym in data else data["Close"].dropna()
+            if len(closes) >= 2:
+                prev, last = float(closes.iloc[-2]), float(closes.iloc[-1])
+                if prev > 0 and last > 0:
+                    out[sym] = {"price": last, "changePercent": (last / prev - 1) * 100}
+        except Exception:
+            continue
+    return out
+
+
 def price_history(symbol: str, period: str = "1y") -> pd.Series:
     """Daily closes indexed by ISO date string."""
     df = yf.Ticker(symbol).history(period=period, interval="1d", auto_adjust=True)

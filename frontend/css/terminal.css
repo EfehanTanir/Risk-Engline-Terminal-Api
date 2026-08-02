@@ -309,11 +309,14 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
 /* ---------- update notification ---------- */
 .ver-btn { position: relative; }
 .ver-dot {
-  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--amber); margin-left: 3px; vertical-align: middle;
-  box-shadow: 0 0 6px var(--amber); animation: verpulse 1.4s ease-in-out infinite;
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--amber); margin-left: 4px; vertical-align: middle;
+  animation: verpulse 1.3s ease-in-out infinite;
 }
-@keyframes verpulse { 50% { opacity: 0.3; } }
+@keyframes verpulse {
+  0%, 100% { box-shadow: 0 0 4px var(--amber); opacity: 1; }
+  50% { box-shadow: 0 0 11px 2px var(--amber); opacity: 0.5; }
+}
 .wn-overlay {
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(0, 0, 0, 0.68); display: flex; align-items: center; justify-content: center;

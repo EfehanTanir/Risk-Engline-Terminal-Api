@@ -3,9 +3,16 @@
 // panel and overlay are injected here so no page markup needs editing.
 // "Seen" version is tracked in localStorage; a new release auto-opens once.
 (function () {
-  const CURRENT = '2.2';
+  const CURRENT = '2.3';
 
   const CHANGELOG = [
+    {
+      v: '2.3', date: '2026-08-02',
+      tr: ['Piyasa Haritası artık her sektörün GERÇEK en çok yükselen ve düşenlerini geniş bir hisse evrenini tarayarak buluyor',
+           'BIST · NASDAQ · Avrupa · Asya piyasa geçişi ve 60 sn otomatik yenileme'],
+      en: ['Market Map now scans a broad universe to surface each sector’s real top gainers and losers',
+           'BIST · NASDAQ · Europe · Asia market switch with 60s auto-refresh'],
+    },
     {
       v: '2.2', date: '2026-08-02',
       tr: ['F5 Piyasa Haritası — BIST hisseleri sektöre göre, günlük değişime göre renkli',

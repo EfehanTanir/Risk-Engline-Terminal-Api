@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import math
+import time
 from typing import Literal, Optional
 
 import numpy as np
@@ -139,74 +140,137 @@ def api_stock(symbol: str = Query(...)):
 
 # ---- multi-market sector heatmap ----------------------------------------
 
-# Curated liquid names per market, grouped by a sector KEY (translated in the
-# frontend via i18n). Each entry is (yahoo_symbol, display_code).
+# Broad liquid universe per market, grouped by a sector KEY (translated in the
+# frontend via i18n). The heatmap scans the whole sector and surfaces only the
+# biggest movers, so the tiles reflect the real top gainers/losers of the day.
+TOP_PER_SIDE = 6  # up to this many gainers AND losers shown per sector
+
 MARKETS = {
     "bist": {
-        "banks": [("GARAN.IS", "GARAN"), ("AKBNK.IS", "AKBNK"), ("YKBNK.IS", "YKBNK"),
-                  ("ISCTR.IS", "ISCTR"), ("VAKBN.IS", "VAKBN"), ("HALKB.IS", "HALKB")],
-        "holding": [("KCHOL.IS", "KCHOL"), ("SAHOL.IS", "SAHOL"), ("DOHOL.IS", "DOHOL"),
-                    ("ALARK.IS", "ALARK"), ("ENKAI.IS", "ENKAI")],
-        "industry": [("EREGL.IS", "EREGL"), ("KRDMD.IS", "KRDMD"), ("SASA.IS", "SASA"),
-                     ("PETKM.IS", "PETKM"), ("TUPRS.IS", "TUPRS"), ("HEKTS.IS", "HEKTS"),
-                     ("GUBRF.IS", "GUBRF")],
-        "auto": [("FROTO.IS", "FROTO"), ("TOASO.IS", "TOASO"),
-                 ("ARCLK.IS", "ARCLK"), ("VESTL.IS", "VESTL")],
-        "retail": [("BIMAS.IS", "BIMAS"), ("MGROS.IS", "MGROS"), ("SOKM.IS", "SOKM"),
-                   ("ULKER.IS", "ULKER"), ("CCOLA.IS", "CCOLA")],
-        "transport_tech": [("THYAO.IS", "THYAO"), ("PGSUS.IS", "PGSUS"), ("TAVHL.IS", "TAVHL"),
-                           ("ASELS.IS", "ASELS"), ("TCELL.IS", "TCELL"), ("TTKOM.IS", "TTKOM")],
+        "banks": ["GARAN.IS", "AKBNK.IS", "YKBNK.IS", "ISCTR.IS", "VAKBN.IS", "HALKB.IS",
+                  "TSKB.IS", "ALBRK.IS", "SKBNK.IS", "QNBFB.IS", "ICBCT.IS", "KLNMA.IS"],
+        "holding": ["KCHOL.IS", "SAHOL.IS", "DOHOL.IS", "ALARK.IS", "ENKAI.IS", "SISE.IS",
+                    "AGHOL.IS", "TKFEN.IS", "KOZAA.IS", "NTHOL.IS", "ECILC.IS", "GLYHO.IS",
+                    "BRYAT.IS", "GSDHO.IS", "IHLGM.IS"],
+        "industry": ["EREGL.IS", "KRDMD.IS", "SASA.IS", "PETKM.IS", "TUPRS.IS", "HEKTS.IS",
+                     "GUBRF.IS", "KORDS.IS", "ALKIM.IS", "BAGFS.IS", "CIMSA.IS", "AKCNS.IS",
+                     "OYAKC.IS", "BRSAN.IS", "CEMTS.IS", "KONYA.IS", "AKSA.IS", "GOODY.IS"],
+        "auto": ["FROTO.IS", "TOASO.IS", "ARCLK.IS", "VESTL.IS", "OTKAR.IS", "TTRAK.IS",
+                 "KARSN.IS", "DOAS.IS", "KLMSN.IS", "EGEEN.IS", "PARSN.IS", "JANTS.IS"],
+        "retail": ["BIMAS.IS", "MGROS.IS", "SOKM.IS", "ULKER.IS", "CCOLA.IS", "AEFES.IS",
+                   "BIZIM.IS", "TATGD.IS", "KNFRT.IS", "PNSUT.IS", "PETUN.IS", "TUKAS.IS",
+                   "MAVI.IS", "SELEC.IS"],
+        "transport_tech": ["THYAO.IS", "PGSUS.IS", "TAVHL.IS", "ASELS.IS", "TCELL.IS", "TTKOM.IS",
+                           "ASTOR.IS", "KONTR.IS", "LOGO.IS", "NETAS.IS", "KAREL.IS", "INDES.IS",
+                           "ARENA.IS", "ARDYZ.IS", "PKART.IS", "ALCTL.IS", "SMART.IS", "DGATE.IS"],
     },
     "us": {
-        "technology": [("AAPL", "AAPL"), ("MSFT", "MSFT"), ("GOOGL", "GOOGL"),
-                       ("AMZN", "AMZN"), ("META", "META")],
-        "semiconductors": [("NVDA", "NVDA"), ("AMD", "AMD"), ("AVGO", "AVGO"),
-                           ("INTC", "INTC"), ("QCOM", "QCOM"), ("MU", "MU")],
-        "consumer": [("TSLA", "TSLA"), ("WMT", "WMT"), ("COST", "COST"),
-                     ("KO", "KO"), ("MCD", "MCD"), ("NKE", "NKE")],
-        "finance": [("JPM", "JPM"), ("BAC", "BAC"), ("GS", "GS"), ("MS", "MS"), ("V", "V")],
-        "healthcare": [("JNJ", "JNJ"), ("UNH", "UNH"), ("PFE", "PFE"),
-                       ("MRK", "MRK"), ("ABBV", "ABBV")],
-        "communication": [("NFLX", "NFLX"), ("DIS", "DIS"), ("T", "T"), ("VZ", "VZ")],
+        "technology": ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "ORCL", "CRM", "ADBE",
+                       "CSCO", "IBM", "NOW", "INTU", "ACN"],
+        "semiconductors": ["NVDA", "AMD", "AVGO", "INTC", "QCOM", "MU", "TXN", "AMAT",
+                           "LRCX", "KLAC", "ADI", "MRVL", "NXPI", "ON", "TSM"],
+        "consumer": ["TSLA", "WMT", "COST", "KO", "MCD", "NKE", "SBUX", "PEP", "PG",
+                     "HD", "LOW", "TGT", "BKNG", "CMG"],
+        "finance": ["JPM", "BAC", "GS", "MS", "V", "MA", "WFC", "C", "AXP", "BLK",
+                    "SCHW", "USB", "PNC", "CB"],
+        "healthcare": ["JNJ", "UNH", "PFE", "MRK", "ABBV", "LLY", "TMO", "ABT", "DHR",
+                       "BMY", "AMGN", "GILD", "CVS", "MDT"],
+        "communication": ["NFLX", "DIS", "T", "VZ", "CMCSA", "TMUS", "CHTR", "WBD", "EA", "TTWO"],
     },
     "europe": {
-        "technology": [("SAP.DE", "SAP"), ("ASML.AS", "ASML"), ("ADYEN.AS", "ADYEN")],
-        "luxury": [("MC.PA", "LVMH"), ("OR.PA", "LOREAL"), ("RMS.PA", "HERMES")],
-        "industrials": [("SIE.DE", "SIEMENS"), ("AIR.PA", "AIRBUS"), ("ABBN.SW", "ABB")],
-        "healthcare": [("NOVN.SW", "NOVARTIS"), ("ROG.SW", "ROCHE"), ("AZN.L", "ASTRA")],
-        "finance": [("HSBA.L", "HSBC"), ("ALV.DE", "ALLIANZ"), ("BNP.PA", "BNP")],
-        "energy": [("SHEL.L", "SHELL"), ("BP.L", "BP"), ("TTE.PA", "TOTAL")],
-        "consumer": [("NESN.SW", "NESTLE"), ("ULVR.L", "UNILEVER"), ("DGE.L", "DIAGEO")],
+        "technology": ["SAP.DE", "ASML.AS", "ADYEN.AS", "STM.PA", "CAP.PA", "IFX.DE", "PRX.AS"],
+        "luxury": ["MC.PA", "OR.PA", "RMS.PA", "KER.PA", "EL.PA", "CFR.SW", "MONC.MI", "BRBY.L"],
+        "industrials": ["SIE.DE", "AIR.PA", "ABBN.SW", "SU.PA", "DHL.DE", "MBG.DE", "BMW.DE",
+                        "VOW3.DE", "PHIA.AS"],
+        "healthcare": ["NOVN.SW", "ROG.SW", "AZN.L", "SAN.PA", "GSK.L", "BAYN.DE", "NOVO-B.CO"],
+        "finance": ["HSBA.L", "ALV.DE", "BNP.PA", "SAN.MC", "INGA.AS", "ISP.MI", "BBVA.MC",
+                    "DBK.DE", "BARC.L", "LLOY.L"],
+        "energy": ["SHEL.L", "BP.L", "TTE.PA", "ENI.MI", "EQNR.OL", "REP.MC", "IBE.MC"],
+        "consumer": ["NESN.SW", "ULVR.L", "DGE.L", "HEIA.AS", "ABI.BR", "BATS.L", "RI.PA"],
     },
     "asia": {
-        "technology": [("6758.T", "SONY"), ("0700.HK", "TENCENT"),
-                       ("9988.HK", "ALIBABA"), ("3690.HK", "MEITUAN")],
-        "semiconductors": [("2330.TW", "TSMC"), ("005930.KS", "SAMSUNG"), ("000660.KS", "SKHYNIX")],
-        "auto": [("7203.T", "TOYOTA"), ("7267.T", "HONDA"), ("1211.HK", "BYD")],
-        "finance": [("8306.T", "MUFG"), ("0939.HK", "CCB"), ("1299.HK", "AIA")],
-        "consumer": [("9983.T", "UNIQLO"), ("1810.HK", "XIAOMI"), ("9618.HK", "JD")],
-        "telecom": [("9432.T", "NTT"), ("9984.T", "SOFTBANK"), ("0941.HK", "CHINAMOBILE")],
+        "technology": ["6758.T", "0700.HK", "9988.HK", "3690.HK", "9618.HK", "6861.T"],
+        "semiconductors": ["2330.TW", "005930.KS", "000660.KS", "6857.T", "8035.T", "2454.TW"],
+        "auto": ["7203.T", "7267.T", "1211.HK", "7201.T", "005380.KS", "000270.KS"],
+        "finance": ["8306.T", "0939.HK", "1299.HK", "8316.T", "1398.HK", "3988.HK"],
+        "consumer": ["9983.T", "1810.HK", "2331.HK", "0288.HK", "2020.HK"],
+        "telecom": ["9432.T", "9984.T", "0941.HK", "0762.HK"],
     },
 }
+
+# Friendly display codes for symbols whose ticker is cryptic (mostly EU/Asia).
+# Anything not listed falls back to the ticker without its exchange suffix.
+CODE_NAMES = {
+    "SAP.DE": "SAP", "ASML.AS": "ASML", "ADYEN.AS": "ADYEN", "STM.PA": "STM",
+    "CAP.PA": "CAPGEMINI", "IFX.DE": "INFINEON", "PRX.AS": "PROSUS",
+    "MC.PA": "LVMH", "OR.PA": "LOREAL", "RMS.PA": "HERMES", "KER.PA": "KERING",
+    "EL.PA": "ESSILOR", "CFR.SW": "RICHEMONT", "MONC.MI": "MONCLER", "BRBY.L": "BURBERRY",
+    "SIE.DE": "SIEMENS", "AIR.PA": "AIRBUS", "ABBN.SW": "ABB", "SU.PA": "SCHNEIDER",
+    "DHL.DE": "DHL", "MBG.DE": "MERCEDES", "BMW.DE": "BMW", "VOW3.DE": "VW", "PHIA.AS": "PHILIPS",
+    "NOVN.SW": "NOVARTIS", "ROG.SW": "ROCHE", "AZN.L": "ASTRA", "SAN.PA": "SANOFI",
+    "GSK.L": "GSK", "BAYN.DE": "BAYER", "NOVO-B.CO": "NOVONORDISK",
+    "HSBA.L": "HSBC", "ALV.DE": "ALLIANZ", "BNP.PA": "BNP", "SAN.MC": "SANTANDER",
+    "INGA.AS": "ING", "ISP.MI": "INTESA", "BBVA.MC": "BBVA", "DBK.DE": "DEUTSCHEBANK",
+    "BARC.L": "BARCLAYS", "LLOY.L": "LLOYDS",
+    "SHEL.L": "SHELL", "BP.L": "BP", "TTE.PA": "TOTAL", "ENI.MI": "ENI",
+    "EQNR.OL": "EQUINOR", "REP.MC": "REPSOL", "IBE.MC": "IBERDROLA",
+    "NESN.SW": "NESTLE", "ULVR.L": "UNILEVER", "DGE.L": "DIAGEO", "HEIA.AS": "HEINEKEN",
+    "ABI.BR": "ABINBEV", "BATS.L": "BAT", "RI.PA": "PERNOD",
+    "6758.T": "SONY", "0700.HK": "TENCENT", "9988.HK": "ALIBABA", "3690.HK": "MEITUAN",
+    "9618.HK": "JD", "6861.T": "KEYENCE", "2330.TW": "TSMC", "005930.KS": "SAMSUNG",
+    "000660.KS": "SKHYNIX", "6857.T": "ADVANTEST", "8035.T": "TOKYOELEC", "2454.TW": "MEDIATEK",
+    "7203.T": "TOYOTA", "7267.T": "HONDA", "1211.HK": "BYD", "7201.T": "NISSAN",
+    "005380.KS": "HYUNDAI", "000270.KS": "KIA", "8306.T": "MUFG", "0939.HK": "CCB",
+    "1299.HK": "AIA", "8316.T": "SMFG", "1398.HK": "ICBC", "3988.HK": "BOC",
+    "9983.T": "UNIQLO", "1810.HK": "XIAOMI", "2331.HK": "LINING", "0288.HK": "WHGROUP",
+    "2020.HK": "ANTA", "9432.T": "NTT", "9984.T": "SOFTBANK", "0941.HK": "CHINAMOBILE",
+    "0762.HK": "CHINAUNICOM",
+}
+
+
+def _display_code(sym: str) -> str:
+    return CODE_NAMES.get(sym) or sym.split(".")[0]
+
+
+_heatmap_cache: dict = {}  # market -> (timestamp, payload); short TTL for auto-refresh
 
 
 @app.get("/api/heatmap")
 def api_heatmap(market: str = "bist"):
-    """Daily-change heatmap grouped by sector, for the chosen market."""
-    sector_map = MARKETS.get(market, MARKETS["bist"])
-    all_syms = [sym for stocks in sector_map.values() for sym, _ in stocks]
-    quotes = yahoo.light_quotes(all_syms)
+    """Scan each sector's full universe and return the biggest daily movers
+    (top gainers + top losers), grouped by sector, for the chosen market."""
+    if market not in MARKETS:
+        market = "bist"
+
+    now = time.time()
+    cached = _heatmap_cache.get(market)
+    if cached and now - cached[0] < 45:
+        return cached[1]
+
+    sector_map = MARKETS[market]
+    all_syms = [s for syms in sector_map.values() for s in syms]
+    changes = yahoo.market_changes(all_syms)
+
     sectors = []
-    for key, stocks in sector_map.items():
-        arr = []
-        for sym, code in stocks:
-            q = quotes.get(sym)
+    for key, syms in sector_map.items():
+        rows = []
+        for sym in syms:
+            q = changes.get(sym)
             if q:
-                arr.append({"symbol": sym, "code": code,
-                            "price": q["price"], "changePercent": q["changePercent"]})
-        if arr:
-            sectors.append({"key": key, "stocks": arr})
-    return {"market": market if market in MARKETS else "bist", "sectors": sectors}
+                rows.append({"symbol": sym, "code": _display_code(sym),
+                             "price": q["price"], "changePercent": q["changePercent"]})
+        if not rows:
+            continue
+        avg = sum(r["changePercent"] for r in rows) / len(rows)
+        gainers = sorted([r for r in rows if r["changePercent"] >= 0],
+                         key=lambda r: -r["changePercent"])[:TOP_PER_SIDE]
+        losers = sorted([r for r in rows if r["changePercent"] < 0],
+                        key=lambda r: r["changePercent"])[:TOP_PER_SIDE]
+        sectors.append({"key": key, "avg": avg, "stocks": gainers + losers})
+
+    payload = {"market": market, "sectors": sectors}
+    _heatmap_cache[market] = (now, payload)
+    return payload
 
 
 # ---- fund universe (screener) -------------------------------------------

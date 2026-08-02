@@ -30,7 +30,11 @@
       return;
     }
     box.innerHTML = sectors.map((sec) => {
-      const avg = sec.stocks.reduce((s, x) => s + x.changePercent, 0) / sec.stocks.length;
+      // Average comes from the backend (over the full sector universe, not just
+      // the displayed movers); fall back to the shown tiles if absent.
+      const avg = typeof sec.avg === 'number'
+        ? sec.avg
+        : sec.stocks.reduce((s, x) => s + x.changePercent, 0) / sec.stocks.length;
       // Losers left (most-negative far left → near-zero at center),
       // gainers right (near-zero at center → most-positive far right).
       const losers = sec.stocks.filter((s) => s.changePercent < 0)
