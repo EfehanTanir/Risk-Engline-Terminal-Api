@@ -137,33 +137,67 @@ def api_stock(symbol: str = Query(...)):
     }
 
 
-# ---- BIST sector heatmap -------------------------------------------------
+# ---- multi-market sector heatmap ----------------------------------------
 
-# Curated liquid BIST names grouped by sector for the market map. (symbol, code)
-BIST_SECTORS = {
-    "Bankacılık": [("GARAN.IS", "GARAN"), ("AKBNK.IS", "AKBNK"), ("YKBNK.IS", "YKBNK"),
-                   ("ISCTR.IS", "ISCTR"), ("VAKBN.IS", "VAKBN"), ("HALKB.IS", "HALKB")],
-    "Holding": [("KCHOL.IS", "KCHOL"), ("SAHOL.IS", "SAHOL"), ("DOHOL.IS", "DOHOL"),
-                ("ALARK.IS", "ALARK"), ("ENKAI.IS", "ENKAI")],
-    "Sanayi & Kimya": [("EREGL.IS", "EREGL"), ("KRDMD.IS", "KRDMD"), ("SASA.IS", "SASA"),
-                       ("PETKM.IS", "PETKM"), ("TUPRS.IS", "TUPRS"), ("HEKTS.IS", "HEKTS"),
-                       ("GUBRF.IS", "GUBRF")],
-    "Otomotiv & Dayanıklı": [("FROTO.IS", "FROTO"), ("TOASO.IS", "TOASO"),
-                             ("ARCLK.IS", "ARCLK"), ("VESTL.IS", "VESTL")],
-    "Perakende & Gıda": [("BIMAS.IS", "BIMAS"), ("MGROS.IS", "MGROS"), ("SOKM.IS", "SOKM"),
-                         ("ULKER.IS", "ULKER"), ("CCOLA.IS", "CCOLA")],
-    "Ulaştırma & Teknoloji": [("THYAO.IS", "THYAO"), ("PGSUS.IS", "PGSUS"), ("TAVHL.IS", "TAVHL"),
-                              ("ASELS.IS", "ASELS"), ("TCELL.IS", "TCELL"), ("TTKOM.IS", "TTKOM")],
+# Curated liquid names per market, grouped by a sector KEY (translated in the
+# frontend via i18n). Each entry is (yahoo_symbol, display_code).
+MARKETS = {
+    "bist": {
+        "banks": [("GARAN.IS", "GARAN"), ("AKBNK.IS", "AKBNK"), ("YKBNK.IS", "YKBNK"),
+                  ("ISCTR.IS", "ISCTR"), ("VAKBN.IS", "VAKBN"), ("HALKB.IS", "HALKB")],
+        "holding": [("KCHOL.IS", "KCHOL"), ("SAHOL.IS", "SAHOL"), ("DOHOL.IS", "DOHOL"),
+                    ("ALARK.IS", "ALARK"), ("ENKAI.IS", "ENKAI")],
+        "industry": [("EREGL.IS", "EREGL"), ("KRDMD.IS", "KRDMD"), ("SASA.IS", "SASA"),
+                     ("PETKM.IS", "PETKM"), ("TUPRS.IS", "TUPRS"), ("HEKTS.IS", "HEKTS"),
+                     ("GUBRF.IS", "GUBRF")],
+        "auto": [("FROTO.IS", "FROTO"), ("TOASO.IS", "TOASO"),
+                 ("ARCLK.IS", "ARCLK"), ("VESTL.IS", "VESTL")],
+        "retail": [("BIMAS.IS", "BIMAS"), ("MGROS.IS", "MGROS"), ("SOKM.IS", "SOKM"),
+                   ("ULKER.IS", "ULKER"), ("CCOLA.IS", "CCOLA")],
+        "transport_tech": [("THYAO.IS", "THYAO"), ("PGSUS.IS", "PGSUS"), ("TAVHL.IS", "TAVHL"),
+                           ("ASELS.IS", "ASELS"), ("TCELL.IS", "TCELL"), ("TTKOM.IS", "TTKOM")],
+    },
+    "us": {
+        "technology": [("AAPL", "AAPL"), ("MSFT", "MSFT"), ("GOOGL", "GOOGL"),
+                       ("AMZN", "AMZN"), ("META", "META")],
+        "semiconductors": [("NVDA", "NVDA"), ("AMD", "AMD"), ("AVGO", "AVGO"),
+                           ("INTC", "INTC"), ("QCOM", "QCOM"), ("MU", "MU")],
+        "consumer": [("TSLA", "TSLA"), ("WMT", "WMT"), ("COST", "COST"),
+                     ("KO", "KO"), ("MCD", "MCD"), ("NKE", "NKE")],
+        "finance": [("JPM", "JPM"), ("BAC", "BAC"), ("GS", "GS"), ("MS", "MS"), ("V", "V")],
+        "healthcare": [("JNJ", "JNJ"), ("UNH", "UNH"), ("PFE", "PFE"),
+                       ("MRK", "MRK"), ("ABBV", "ABBV")],
+        "communication": [("NFLX", "NFLX"), ("DIS", "DIS"), ("T", "T"), ("VZ", "VZ")],
+    },
+    "europe": {
+        "technology": [("SAP.DE", "SAP"), ("ASML.AS", "ASML"), ("ADYEN.AS", "ADYEN")],
+        "luxury": [("MC.PA", "LVMH"), ("OR.PA", "LOREAL"), ("RMS.PA", "HERMES")],
+        "industrials": [("SIE.DE", "SIEMENS"), ("AIR.PA", "AIRBUS"), ("ABBN.SW", "ABB")],
+        "healthcare": [("NOVN.SW", "NOVARTIS"), ("ROG.SW", "ROCHE"), ("AZN.L", "ASTRA")],
+        "finance": [("HSBA.L", "HSBC"), ("ALV.DE", "ALLIANZ"), ("BNP.PA", "BNP")],
+        "energy": [("SHEL.L", "SHELL"), ("BP.L", "BP"), ("TTE.PA", "TOTAL")],
+        "consumer": [("NESN.SW", "NESTLE"), ("ULVR.L", "UNILEVER"), ("DGE.L", "DIAGEO")],
+    },
+    "asia": {
+        "technology": [("6758.T", "SONY"), ("0700.HK", "TENCENT"),
+                       ("9988.HK", "ALIBABA"), ("3690.HK", "MEITUAN")],
+        "semiconductors": [("2330.TW", "TSMC"), ("005930.KS", "SAMSUNG"), ("000660.KS", "SKHYNIX")],
+        "auto": [("7203.T", "TOYOTA"), ("7267.T", "HONDA"), ("1211.HK", "BYD")],
+        "finance": [("8306.T", "MUFG"), ("0939.HK", "CCB"), ("1299.HK", "AIA")],
+        "consumer": [("9983.T", "UNIQLO"), ("1810.HK", "XIAOMI"), ("9618.HK", "JD")],
+        "telecom": [("9432.T", "NTT"), ("9984.T", "SOFTBANK"), ("0941.HK", "CHINAMOBILE")],
+    },
 }
 
 
 @app.get("/api/heatmap")
-def api_heatmap():
-    """BIST daily-change heatmap grouped by sector."""
-    all_syms = [sym for stocks in BIST_SECTORS.values() for sym, _ in stocks]
+def api_heatmap(market: str = "bist"):
+    """Daily-change heatmap grouped by sector, for the chosen market."""
+    sector_map = MARKETS.get(market, MARKETS["bist"])
+    all_syms = [sym for stocks in sector_map.values() for sym, _ in stocks]
     quotes = yahoo.light_quotes(all_syms)
     sectors = []
-    for sector, stocks in BIST_SECTORS.items():
+    for key, stocks in sector_map.items():
         arr = []
         for sym, code in stocks:
             q = quotes.get(sym)
@@ -171,8 +205,8 @@ def api_heatmap():
                 arr.append({"symbol": sym, "code": code,
                             "price": q["price"], "changePercent": q["changePercent"]})
         if arr:
-            sectors.append({"sector": sector, "stocks": arr})
-    return {"sectors": sectors}
+            sectors.append({"key": key, "stocks": arr})
+    return {"market": market if market in MARKETS else "bist", "sectors": sectors}
 
 
 # ---- fund universe (screener) -------------------------------------------

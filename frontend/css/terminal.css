@@ -22,6 +22,11 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* Elements with display:flex/grid override the [hidden] attribute's default
+   display:none, leaving them stuck visible — force real hiding globally. */
+[hidden] { display: none !important; }
+/* ...except the home search panels, which stay visible before searching */
+#stocks-panel[hidden], #funds-panel[hidden] { display: flex !important; }
 
 html, body { height: 100%; }
 body {
@@ -267,17 +272,28 @@ table.corr th, table.corr td { border: 1px solid var(--bg); padding: 6px 8px; te
 table.corr th { color: var(--muted); font-weight: 400; background: var(--panel); }
 
 /* ---------- market heatmap ---------- */
+.hm-markets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.hm-markets .btn { padding: 7px 18px; letter-spacing: 2px; }
+
 .hm-sector { border: 1px solid var(--border); background: var(--panel); margin-bottom: 12px; }
 .hm-head {
   display: flex; justify-content: space-between; align-items: center;
   padding: 8px 12px; border-bottom: 1px solid var(--border);
   font-size: 11px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase;
 }
-.hm-head::before { content: ""; width: 8px; height: 8px; background: var(--amber); margin-right: 8px; }
+.hm-head::before { content: ""; width: 8px; height: 8px; background: var(--amber); margin-right: 8px; flex: none; }
 .hm-head > span:first-of-type { flex: 1; }
 .hm-head > span:last-child { font-variant-numeric: tabular-nums; letter-spacing: 0; }
-.hm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 2px; padding: 2px; }
+
+/* diverging split: losers left of the center axis, gainers right */
+.hm-split { display: flex; align-items: stretch; padding: 2px; }
+.hm-side { flex: 1 1 0; display: flex; gap: 2px; flex-wrap: wrap; min-width: 0; }
+.hm-neg { justify-content: flex-end; }
+.hm-pos { justify-content: flex-start; }
+.hm-axis { width: 2px; flex: none; background: var(--amber); opacity: 0.55; margin: 0 4px; }
+
 .hm-tile {
+  flex: 0 0 auto; width: 92px;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   min-height: 62px; padding: 6px; text-align: center;
   border: 1px solid rgba(0, 0, 0, 0.3); transition: filter .12s;
@@ -286,8 +302,8 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
 .hm-code { font-weight: 700; font-size: 13px; color: #fff; letter-spacing: 1px; }
 .hm-chg { font-size: 11px; color: rgba(255, 255, 255, 0.85); font-variant-numeric: tabular-nums; margin-top: 2px; }
 @media (max-width: 640px) {
-  .hm-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
-  .hm-tile { min-height: 54px; }
+  .hm-tile { width: 78px; min-height: 54px; }
+  .hm-axis { margin: 0 2px; }
 }
 
 /* ---------- update notification ---------- */

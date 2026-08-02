@@ -13,7 +13,7 @@ const API = {
   news(q, lang) { return this._get(`/news?q=${encodeURIComponent(q)}&lang=${lang || 'tr'}`); },
   marketNews(lang) { return this._get(`/market-news?lang=${lang || 'tr'}`); },
   funds() { return this._get('/funds'); },
-  heatmap() { return this._get('/heatmap'); },
+  heatmap(market) { return this._get(`/heatmap?market=${market || 'bist'}`); },
   async portfolio(payload) {
     const res = await fetch(`${window.FINANSLA.API_BASE}/portfolio`, {
       method: 'POST',

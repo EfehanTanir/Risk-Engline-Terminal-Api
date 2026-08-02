@@ -6,7 +6,7 @@
   <title>HEATMAP — FINANSLA TERMINAL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/terminal.css?v=9">
+  <link rel="stylesheet" href="css/terminal.css?v=12">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
 </head>
 <body>
@@ -42,6 +42,13 @@
       </div>
     </div>
 
+    <div class="hm-markets" id="hm-markets">
+      <button class="btn active" data-market="bist" data-i18n="mkt.bist">BIST</button>
+      <button class="btn" data-market="us" data-i18n="mkt.us">NASDAQ</button>
+      <button class="btn" data-market="europe" data-i18n="mkt.eu">EUROPE</button>
+      <button class="btn" data-market="asia" data-i18n="mkt.asia">ASIA</button>
+    </div>
+
     <div id="heatmap"><div class="loading" data-i18n="searching">SEARCHING</div></div>
     <div class="small faint" style="padding:12px 2px" data-i18n="heat.legend"></div>
   </main>
@@ -54,11 +61,11 @@
 
   <div class="disclaimer" data-i18n="legal.text"></div>
 
-  <script src="js/config.js?v=9"></script>
-  <script src="js/i18n.js?v=9"></script>
-  <script src="js/api.js?v=9"></script>
-  <script src="js/ui.js?v=9"></script>
-  <script src="js/heatmap.js?v=9"></script>
-  <script src="js/whatsnew.js?v=9"></script>
+  <script src="js/config.js?v=12"></script>
+  <script src="js/i18n.js?v=12"></script>
+  <script src="js/api.js?v=12"></script>
+  <script src="js/ui.js?v=12"></script>
+  <script src="js/heatmap.js?v=12"></script>
+  <script src="js/whatsnew.js?v=12"></script>
 </body>
 </html>
