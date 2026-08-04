@@ -96,6 +96,21 @@
       renderChart(Number(btn.dataset.days));
     });
 
+    // Interactive chart (Lightweight Charts over our own NAV history) — lazy-
+    // built on first open. The Chart.js NAV chart above is left untouched.
+    const iaBtn = document.getElementById('ia-toggle');
+    const iaBox = document.getElementById('ia-chart');
+    let iaChart = null;
+    iaBtn.addEventListener('click', () => {
+      const opening = iaBox.hidden;
+      iaBox.hidden = !opening;
+      iaBtn.classList.toggle('active', opening);
+      iaBtn.textContent = opening ? t('chart.hide') : t('chart.interactive');
+      if (opening && !iaChart) {
+        iaChart = UI.interactiveChart(iaBox, fullHistory, { precision: latest.price < 10 ? 6 : 4 });
+      }
+    });
+
     // Allocation doughnut + legend list (fixed categorical hue order)
     if (allocation && allocation.slices.length) {
       document.getElementById('alloc-date').textContent = allocation.date;

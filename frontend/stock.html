@@ -6,9 +6,10 @@
   <title>EQUITY — FINANSLA TERMINAL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/terminal.css?v=14">
+  <link rel="stylesheet" href="css/terminal.css?v=17">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -19,6 +20,7 @@
       <a href="compare.html"><b>F3</b><span data-i18n="nav.comp">COMPARE</span></a>
       <a href="screener.html"><b>F4</b><span data-i18n="nav.screen">SCREENER</span></a>
       <a href="heatmap.html"><b>F5</b><span data-i18n="nav.heat">HEATMAP</span></a>
+      <a href="https://derinlik.finansla.net" target="_blank" rel="noopener noreferrer" class="nav-ext"><b>F6</b><span data-i18n="nav.depth">CRYPTO DEPTH</span><span class="ext-arrow">↗</span></a>
     </nav>
     <div class="topsearch">
       <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
@@ -60,7 +62,11 @@
               <button class="btn active" data-days="365">1Y</button>
             </span>
           </div>
-          <div class="panel-body"><div class="chart-box" id="price-chart-box"><canvas id="price-chart"></canvas></div></div>
+          <div class="panel-body">
+            <div class="chart-box" id="price-chart-box"><canvas id="price-chart"></canvas></div>
+            <button class="btn iachart-btn" id="ia-toggle" data-i18n="chart.interactive">INTERACTIVE CHART ▾</button>
+            <div class="iachart" id="ia-chart" hidden></div>
+          </div>
         </section>
 
         <section class="col-4 panel">
@@ -109,11 +115,11 @@
 
   <div class="disclaimer" data-i18n="legal.text"></div>
 
-  <script src="js/config.js?v=14"></script>
-  <script src="js/i18n.js?v=14"></script>
-  <script src="js/api.js?v=14"></script>
-  <script src="js/ui.js?v=14"></script>
-  <script src="js/stock.js?v=14"></script>
-  <script src="js/whatsnew.js?v=14"></script>
+  <script src="js/config.js?v=17"></script>
+  <script src="js/i18n.js?v=17"></script>
+  <script src="js/api.js?v=17"></script>
+  <script src="js/ui.js?v=17"></script>
+  <script src="js/stock.js?v=17"></script>
+  <script src="js/whatsnew.js?v=17"></script>
 </body>
 </html>

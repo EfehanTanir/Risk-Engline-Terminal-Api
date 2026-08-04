@@ -145,6 +145,37 @@ const UI = {
     });
   },
 
+  /** Interactive area chart (TradingView Lightweight Charts) drawn from our
+   *  own {date, close} history — zoom, pan, crosshair; matches the dark theme. */
+  interactiveChart(el, history, { precision = 2 } = {}) {
+    if (typeof LightweightCharts === 'undefined' || !history || !history.length) return null;
+    const first = history[0].close, last = history[history.length - 1].close;
+    const color = last >= first ? UI.COLORS.green : UI.COLORS.red;
+    const chart = LightweightCharts.createChart(el, {
+      autoSize: true,
+      layout: {
+        background: { type: 'solid', color: 'rgba(0,0,0,0)' },
+        textColor: '#7e8fa0', fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+      },
+      grid: { vertLines: { color: '#141f2b' }, horzLines: { color: '#141f2b' } },
+      rightPriceScale: { borderColor: '#1c2936' },
+      timeScale: { borderColor: '#1c2936' },
+      crosshair: {
+        mode: LightweightCharts.CrosshairMode.Normal,
+        vertLine: { color: '#ffb000', width: 1, labelBackgroundColor: '#ffb000' },
+        horzLine: { color: '#ffb000', width: 1, labelBackgroundColor: '#ffb000' },
+      },
+    });
+    const series = chart.addAreaSeries({
+      lineColor: color, topColor: color + '44', bottomColor: color + '05',
+      lineWidth: 2, priceLineVisible: false,
+      priceFormat: { type: 'price', precision, minMove: 1 / Math.pow(10, precision) },
+    });
+    series.setData(history.map((h) => ({ time: h.date, value: h.close })));
+    chart.timeScale().fitContent();
+    return chart;
+  },
+
   sentimentBadge(sent) {
     const label = sent && sent.label ? sent.label : 'neutral';
     const text = label === 'positive' ? 'POS' : label === 'negative' ? 'NEG' : 'NEU';

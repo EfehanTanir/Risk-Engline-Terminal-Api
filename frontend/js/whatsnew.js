@@ -3,9 +3,16 @@
 // panel and overlay are injected here so no page markup needs editing.
 // "Seen" version is tracked in localStorage; a new release auto-opens once.
 (function () {
-  const CURRENT = '2.3';
+  const CURRENT = '2.4';
 
   const CHANGELOG = [
+    {
+      v: '2.4', date: '2026-08-03',
+      tr: ['Üst menüye F6 Kripto Derinlik — canlı emir defteri derinliği (derinlik.finansla.net) eklendi',
+           'Hisse ve fon sayfalarına interaktif grafik (yakınlaştırma · kaydırma · imleç) eklendi'],
+      en: ['Top menu now has F6 Crypto Depth — live order-book depth (derinlik.finansla.net)',
+           'Interactive chart (zoom · pan · crosshair) added to stock and fund pages'],
+    },
     {
       v: '2.3', date: '2026-08-02',
       tr: ['Piyasa Haritası artık her sektörün GERÇEK en çok yükselen ve düşenlerini geniş bir hisse evrenini tarayarak buluyor',

@@ -119,6 +119,21 @@
       renderChart(Number(btn.dataset.days));
     });
 
+    // Interactive chart (Lightweight Charts over our own history) — lazy-built
+    // on first open. The Chart.js chart above is left completely untouched.
+    const iaBtn = document.getElementById('ia-toggle');
+    const iaBox = document.getElementById('ia-chart');
+    let iaChart = null;
+    iaBtn.addEventListener('click', () => {
+      const opening = iaBox.hidden;
+      iaBox.hidden = !opening;
+      iaBtn.classList.toggle('active', opening);
+      iaBtn.textContent = opening ? t('chart.hide') : t('chart.interactive');
+      if (opening && !iaChart) {
+        iaChart = UI.interactiveChart(iaBox, fullHistory, { precision: quote.price < 10 ? 4 : 2 });
+      }
+    });
+
     // Risk metrics
     if (risk) {
       const riskBars = [
