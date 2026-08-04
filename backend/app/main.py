@@ -138,6 +138,34 @@ def api_stock(symbol: str = Query(...)):
     }
 
 
+# ---- price history (benchmark overlays for the interactive chart) -------
+
+_history_cache: dict = {}  # (symbol, period) -> (timestamp, payload); short TTL
+
+
+@app.get("/api/history")
+def api_history(symbol: str = Query(..., min_length=1), period: str = "1y"):
+    """Lightweight daily-close history for one symbol — used to overlay
+    benchmark lines (BIST 100, NASDAQ) on the interactive chart."""
+    if period not in ("1mo", "3mo", "6mo", "1y", "2y", "5y"):
+        period = "1y"
+    key = (symbol.upper(), period)
+    now = time.time()
+    cached = _history_cache.get(key)
+    if cached and now - cached[0] < 300:
+        return cached[1]
+    try:
+        closes = yahoo.price_history(symbol, period)
+    except Exception as e:
+        raise HTTPException(502, f"Yahoo Finance error for {symbol}: {e}")
+    payload = {
+        "symbol": symbol.upper(),
+        "history": [{"date": d, "close": float(c)} for d, c in closes.items()],
+    }
+    _history_cache[key] = (now, payload)
+    return payload
+
+
 # ---- multi-market sector heatmap ----------------------------------------
 
 # Broad liquid universe per market, grouped by a sector KEY (translated in the
