@@ -38,6 +38,7 @@ Finansla Terminal/
 │   ├── app/admin.py          admin API: health probes, analytics, tracking beacon
 │   ├── app/totp.py           authenticator-app login (RFC 6238) + signed sessions
 │   ├── app/analytics.py      visitor / usage counters (privacy-preserving)
+│   ├── app/sitecfg.py        live announcement banner + maintenance mode
 │   └── app/store.py          optional Upstash Redis over REST
 └── frontend/    Static HTML/CSS/JS terminal UI
     ├── index.html   search + markets overview + headlines
@@ -72,7 +73,9 @@ app (RFC 6238, stdlib only), exchanged for a short-lived signed session token.
 | Endpoint | Auth | Description |
 |---|---|---|
 | `POST /api/track` | public | Page-view beacon from `js/track.js` |
+| `GET /api/site-config` | public | Live announcement banner / maintenance state |
 | `POST /api/admin/login` | public | `{"code":"123456"}` → session token |
+| `GET · POST /api/admin/site` | session | Publish the banner / toggle maintenance mode |
 | `GET /api/admin/health` | session | Yahoo / TEFAS / Google News / storage probes, instance & cache state |
 | `GET /api/admin/stats?days=14` | session | Visitor and usage analytics |
 | `POST /api/admin/reset` | session | Clear analytics counters |

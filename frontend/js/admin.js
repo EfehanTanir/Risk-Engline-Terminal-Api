@@ -39,6 +39,9 @@
 
   function forceLogout() {
     sessionStorage.removeItem(KEY);
+    // Bakım modu muafiyetini de bırak, yoksa çıkış yaptıktan sonra da bakım
+    // ekranını görmezsiniz ve ziyaretçinin ne gördüğünü test edemezsiniz.
+    localStorage.removeItem('finansla_admin_bypass');
     session = '';
     stopTimers();
     dash.hidden = true;
@@ -53,7 +56,10 @@
     gate.hidden = true;
     dash.hidden = false;
     $('logout-btn').hidden = false;
+    // Bakım modunu açtığınızda siteyi gezmeye devam edebilesiniz diye.
+    localStorage.setItem('finansla_admin_bypass', '1');
     refreshAll();
+    loadSite();
     startTimers();
   }
 
@@ -100,11 +106,14 @@
 
   $('logout-btn').addEventListener('click', forceLogout);
 
-  // Authenticator kodunun ne zaman yenileneceğini göster (30 sn'lik periyot).
   setInterval(() => {
-    if (gate.hidden) return;
-    const left = 30 - (Math.floor(Date.now() / 1000) % 30);
-    $('totp-countdown').textContent = `KOD YENİLENİYOR: ${left}sn`;
+    if (!gate.hidden) {
+      // Authenticator kodunun ne zaman yenileneceğini göster (30 sn periyot)
+      const left = 30 - (Math.floor(Date.now() / 1000) % 30);
+      $('totp-countdown').textContent = `KOD YENİLENİYOR: ${left}sn`;
+    } else if (lastSiteCfg) {
+      renderSiteStatus();   // duyurunun kalan süresi canlı saysın
+    }
   }, 1000);
 
   // ---- yardımcılar -------------------------------------------------------
@@ -261,6 +270,163 @@
       $('health-age').textContent = '';
     }
   }
+
+  // ---- site kontrolü -----------------------------------------------------
+
+  const EXPIRY_OPTIONS = [0, 1, 3, 6, 12, 24, 72];
+  let lastSiteCfg = null;
+
+  function siteForm(overrides) {
+    const o = overrides || {};
+    return {
+      banner: {
+        active: 'bannerActive' in o ? o.bannerActive : $('banner-active').checked,
+        level: $('banner-level').value,
+        tr: $('banner-tr').value.trim(),
+        en: $('banner-en').value.trim(),
+        expiresHours: Number($('banner-expiry').value) || 0,
+      },
+      maintenance: {
+        active: 'maintActive' in o ? o.maintActive : $('maint-active').checked,
+        tr: $('maint-tr').value.trim(),
+        en: $('maint-en').value.trim(),
+      },
+    };
+  }
+
+  function fillSiteForm(cfg) {
+    lastSiteCfg = cfg;
+    const b = cfg.banner || {}, m = cfg.maintenance || {};
+    $('banner-active').checked = !!b.active;
+    $('banner-level').value = b.level || 'info';
+    $('banner-tr').value = b.tr || '';
+    $('banner-en').value = b.en || '';
+    $('maint-active').checked = !!m.active;
+    $('maint-tr').value = m.tr || '';
+    $('maint-en').value = m.en || '';
+
+    // Kalan süreyi en yakın seçeneğe oturt, böylece dokunmadan tekrar
+    // yayınlarsanız duyuru yanlışlıkla süresiz hâle gelmesin.
+    let hours = 0;
+    if (b.active && b.expiresAt) {
+      const left = (b.expiresAt - Date.now() / 1000) / 3600;
+      if (left > 0) {
+        hours = EXPIRY_OPTIONS.reduce((best, opt) =>
+          (opt > 0 && Math.abs(opt - left) < Math.abs(best - left) ? opt : best), 72);
+      }
+    }
+    $('banner-expiry').value = String(hours);
+
+    renderSitePreview();
+    renderSiteStatus();
+  }
+
+  function humanLeft(seconds) {
+    if (seconds <= 0) return 'birazdan';
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h >= 24) return `${Math.floor(h / 24)} gün ${h % 24} saat`;
+    if (h > 0) return `${h} saat ${m} dk`;
+    return `${m} dk`;
+  }
+
+  function renderSiteStatus() {
+    const cfg = lastSiteCfg;
+    const bannerLive = !!(cfg && cfg.banner && cfg.banner.active
+      && (cfg.banner.tr || cfg.banner.en));
+    const maintLive = !!(cfg && cfg.maintenance && cfg.maintenance.active);
+
+    $('banner-kill').disabled = !bannerLive;
+    $('maint-kill').disabled = !maintLive;
+
+    const parts = [];
+    if (maintLive) parts.push('<span class="down">● BAKIM MODU YAYINDA</span>');
+    if (bannerLive) {
+      let note = '● DUYURU YAYINDA';
+      const exp = cfg.banner.expiresAt;
+      if (exp) note += ` — ${humanLeft(exp - Date.now() / 1000)} sonra otomatik kalkar`;
+      else note += ' — süresiz';
+      parts.push(`<span class="up">${note}</span>`);
+    }
+    $('site-status').innerHTML = parts.length
+      ? parts.join(' &nbsp; ')
+      : '<span class="faint">● yayında bir şey yok</span>';
+  }
+
+  function renderSitePreview() {
+    const f = siteForm();
+    const text = f.banner.tr || f.banner.en;
+    if (!f.banner.active || !text) {
+      $('sc-preview').innerHTML =
+        '<div class="small faint">Önizleme: duyuru kapalı veya metin boş.</div>';
+      return;
+    }
+    const h = f.banner.expiresHours;
+    const when = h ? `${h} saat sonra kendiliğinden kalkacak`
+                   : 'siz kaldırana kadar yayında kalacak';
+    $('sc-preview').innerHTML =
+      `<div class="small faint" style="margin-bottom:6px">Ziyaretçi bunu görecek — ${when}:</div>
+       <div class="site-banner ${f.banner.level} preview">
+         <span class="sb-dot"></span><span class="sb-text">${UI.esc(text)}</span>
+         <button class="sb-x" tabindex="-1">✕</button>
+       </div>`;
+  }
+
+  async function loadSite() {
+    try {
+      fillSiteForm(await call('/admin/site'));
+    } catch (e) {
+      $('site-status').innerHTML = `<span class="down">${UI.esc(e.message)}</span>`;
+    }
+  }
+
+  async function pushSite(payload, note) {
+    $('site-saved').textContent = 'yayınlanıyor…';
+    try {
+      fillSiteForm(await call('/admin/site', {
+        method: 'POST', body: JSON.stringify(payload),
+      }));
+      const t = new Date().toLocaleTimeString('tr-TR', { hour12: false });
+      $('site-saved').textContent = `${note} ${t} — ziyaretçilere en geç 60 sn içinde ulaşır`;
+    } catch (e) {
+      $('site-saved').textContent = `hata: ${e.message}`;
+    }
+  }
+
+  async function saveSite() {
+    const f = siteForm();
+    if (f.maintenance.active && !(lastSiteCfg && lastSiteCfg.maintenance.active) &&
+        !confirm('BAKIM MODU açılıyor. Siteye giren herkes tam ekran bakım bildirimi görecek. Emin misiniz?')) {
+      return;
+    }
+    $('site-save').disabled = true;
+    await pushSite(f, 'yayınlandı');
+    $('site-save').disabled = false;
+  }
+
+  // Tek tıkla yayından kaldırma. Metinler formda kalır, sadece yayın durumu
+  // kapanır — aynı duyuruyu sonra tekrar açmak isterseniz yeniden yazmayın.
+  $('banner-kill').addEventListener('click', async () => {
+    $('banner-kill').disabled = true;
+    $('banner-active').checked = false;
+    await pushSite(siteForm({ bannerActive: false }), 'duyuru kaldırıldı');
+  });
+
+  $('maint-kill').addEventListener('click', async () => {
+    $('maint-kill').disabled = true;
+    $('maint-active').checked = false;
+    await pushSite(siteForm({ maintActive: false }), 'bakım modu kapatıldı');
+  });
+
+  ['banner-active', 'banner-tr', 'banner-en', 'banner-level', 'banner-expiry'].forEach((id) => {
+    $(id).addEventListener('input', renderSitePreview);
+    $(id).addEventListener('change', renderSitePreview);
+  });
+  $('site-save').addEventListener('click', saveSite);
+  $('site-reload').addEventListener('click', () => {
+    $('site-saved').textContent = '';
+    loadSite();
+  });
 
   function refreshAll() { loadStats(); loadHealth(); }
 

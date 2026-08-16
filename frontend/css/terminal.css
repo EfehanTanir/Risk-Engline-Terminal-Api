@@ -610,3 +610,81 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
 }
 .admin-code::placeholder { color: var(--faint); letter-spacing: 12px; font-weight: 400; }
 #totp-countdown { letter-spacing: 1px; }
+/* ============================================================
+   SİTE KONTROLÜ — duyuru bandı + bakım ekranı (ziyaretçi tarafı)
+   ============================================================ */
+.site-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 16px; font-size: 12.5px; line-height: 1.4;
+  border-bottom: 1px solid; position: relative; z-index: 200;
+}
+.site-banner .sb-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; }
+.site-banner .sb-text { flex: 1; min-width: 0; }
+.site-banner .sb-x {
+  background: none; border: none; cursor: pointer; flex: none;
+  color: inherit; opacity: 0.55; font-family: var(--mono); font-size: 13px; padding: 0 2px;
+}
+.site-banner .sb-x:hover { opacity: 1; }
+
+.site-banner.info {
+  background: rgba(56, 189, 248, 0.10); border-color: rgba(56, 189, 248, 0.35); color: var(--cyan);
+}
+.site-banner.info .sb-dot { background: var(--cyan); }
+.site-banner.warning {
+  background: rgba(255, 176, 0, 0.10); border-color: rgba(255, 176, 0, 0.35); color: var(--amber);
+}
+.site-banner.warning .sb-dot { background: var(--amber); }
+.site-banner.danger {
+  background: rgba(255, 82, 82, 0.12); border-color: rgba(255, 82, 82, 0.40); color: var(--down);
+}
+.site-banner.danger .sb-dot { background: var(--down); animation: blink 1.2s steps(1) infinite; }
+.site-banner.preview { border: 1px dashed; }
+
+/* tam ekran bakım bildirimi */
+.site-maint {
+  position: fixed; inset: 0; z-index: 9000;
+  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  padding: 24px; text-align: center;
+}
+.site-maint-box { max-width: 520px; }
+.sm-brand { font-size: 17px; font-weight: 700; letter-spacing: 3px; color: var(--amber); }
+.sm-brand span { color: var(--ink); font-weight: 400; margin-left: 7px; }
+.sm-title {
+  margin-top: 26px; font-size: 13px; letter-spacing: 5px; color: var(--down);
+  border: 1px solid var(--down); display: inline-block; padding: 6px 16px;
+  background: rgba(255, 82, 82, 0.08);
+}
+.sm-text { margin-top: 22px; color: var(--ink); font-size: 14px; line-height: 1.7; }
+.sm-foot { margin-top: 30px; color: var(--faint); font-size: 11px; letter-spacing: 2px; }
+
+/* ---- yönetim panelindeki kontrol formu ---- */
+.site-ctl { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.site-ctl-col { min-width: 0; }
+.sc-head {
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  font-size: 12px; font-weight: 700; letter-spacing: 2px; color: var(--amber);
+}
+.sc-head.danger { color: var(--down); }
+.sc-head input { width: 15px; height: 15px; accent-color: var(--amber); cursor: pointer; }
+.sc-head.danger input { accent-color: var(--down); }
+.sc-head + p { margin: 6px 0 12px; line-height: 1.55; }
+.sc-label {
+  display: block; margin: 10px 0 4px;
+  font-size: 10px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase;
+}
+.sc-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--ink);
+  font-family: var(--mono); font-size: 12.5px; padding: 7px 10px; outline: none;
+}
+.sc-input:focus { border-color: var(--amber-dim); }
+.sc-preview { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+
+@media (max-width: 780px) {
+  .site-ctl { grid-template-columns: 1fr; gap: 26px; }
+}
+/* yayindan kaldirma dugmeleri */
+.kill-btn { border-color: var(--amber-dim); color: var(--amber); }
+.kill-btn:hover:not(:disabled) {
+  background: rgba(255, 176, 0, 0.12); color: var(--amber); border-color: var(--amber);
+}
+.kill-btn:disabled { border-color: var(--border); color: var(--faint); }

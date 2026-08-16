@@ -84,6 +84,7 @@ olmasını isterseniz. Tanımsızsa `ADMIN_TOTP_SECRET` kullanılır.
 backend/app/totp.py         (yeni)
 backend/app/store.py        (yeni)
 backend/app/analytics.py    (yeni)
+backend/app/sitecfg.py      (yeni — duyuru bandı / bakım modu)
 backend/app/admin.py        (yeni)
 backend/app/main.py         (değişti — admin router bağlandı)
 ```
@@ -98,13 +99,14 @@ Yeni pip paketi yok: TOTP tamamen standart kütüphane, Upstash istemcisi düz
 admin.html                  (yeni)
 js/admin.js                 (yeni)
 js/track.js                 (yeni)
+js/site.js                  (yeni — duyuru bandı / bakım ekranı)
 js/home.js                  (değişti — tek satır, aramaları bildirir)
-css/terminal.css            (değişti — yönetim stilleri eklendi)
+css/terminal.css            (değişti — yönetim ve duyuru stilleri)
 index.html  stock.html  fund.html  risk.html
-compare.html  screener.html  heatmap.html   (hepsi: ?v=21 + track.js)
+compare.html  screener.html  heatmap.html   (hepsi: ?v=22 + site.js + track.js)
 ```
 
-Tüm sürüm etiketleri **v=21**. Hostinger/LiteSpeed JS/CSS'e 7 günlük
+Tüm sürüm etiketleri **v=22**. Hostinger/LiteSpeed JS/CSS'e 7 günlük
 `Cache-Control` gönderdiği için sürüm artırmadan yükleme yaparsanız ziyaretçiler
 eski dosyalarda kalır. Yükledikten sonra kendi cihazlarınızda Ctrl+F5.
 
@@ -128,6 +130,56 @@ Sağlık iyi ama analitik boşsa, SUNUCU ÖRNEĞİ panelinde *Analitik deposu*
 demektir, yeniden dağıtın.
 
 ---
+
+## Site kontrolü — duyuru bandı ve bakım modu
+
+Panonun en üstündeki **SİTE KONTROLÜ** bölümünden yazdığınız duyuru, yeniden
+dağıtım gerekmeden tüm ziyaretçilere ulaşır. Yeni açılan sayfalarda anında,
+zaten açık olan sekmelerde **en geç 60 saniye** içinde görünür.
+
+**Duyuru bandı** — sayfaların en üstünde tek satır. Üç önem seviyesi var:
+`Bilgi` (mavi), `Uyarı` (amber), `Kritik` (kırmızı, yanıp söner). TR ve EN
+metinlerini ayrı girersiniz; ziyaretçi hangi dildeyse onu görür, biri boşsa
+diğerine düşer. Ziyaretçi ✕ ile kapatabilir — ama **yeni** bir duyuru
+yayınladığınızda kapatmış olanlarda da tekrar belirir.
+
+Tipik kullanım: *"TEFAS verilerinde geçici gecikme yaşanmaktadır"*, SPK
+duyuruları, yeni özellik bildirimi.
+
+**Bakım modu** — ziyaretçiler tam ekran bakım bildirimi görür. Siz görmezsiniz:
+panele giriş yaptığınızda tarayıcınıza bir muafiyet işareti konur, KİLİTLE
+dediğinizde kalkar (yani ziyaretçinin ne gördüğünü test edebilirsiniz).
+
+> ⚠️ Bakım modu bir **nezaket bildirimidir, güvenlik sınırı değildir.** Tarayıcı
+> konsolunu bilen biri geçebilir ve API uçları çalışmaya devam eder. Amaç
+> erişimi engellemek değil, ziyaretçiyi durumdan haberdar etmek.
+
+### Yayından kaldırma — iki yol
+
+**1. Tek tık.** **DUYURUYU KALDIR** ve **BAKIMI KAPAT** düğmeleri anında
+yayından alır; yalnızca yayında bir şey varken etkinleşirler. Metinler formda
+kalır, sadece yayın durumu kapanır — aynı duyuruyu sonra tekrar açmak
+isterseniz yeniden yazmanız gerekmez.
+
+**2. Otomatik süre.** Duyuruyu yayınlarken **1 saat / 3 / 6 / 12 / 24 saat /
+3 gün** seçebilirsiniz; süre dolunca kendiliğinden kalkar, panele girmenize
+gerek kalmaz. "Süresiz" seçerseniz siz kaldırana kadar kalır.
+
+Süre kontrolü sunucuda, **okuma anında** yapılır — yani yayınladıktan sonra
+siteyi tamamen unutsanız bile duyuru zamanında düşer. Panel başlığında kalan
+süre canlı olarak sayar: *"● DUYURU YAYINDA — 4 saat 12 dk sonra otomatik
+kalkar"*.
+
+**YAYINLA** kaydeder, **GERİ AL** sunucudaki son hâli geri yükler.
+Formun altındaki önizleme, ziyaretçinin göreceğinin birebir aynısıdır.
+
+> Kaldırma işlemi ziyaretçilere **en geç ~80 saniyede** ulaşır (sunucudaki 20
+> sn'lik önbellek + tarayıcının 60 sn'lik yoklaması). Açık duran sekmelerde de
+> bant kendiliğinden kaybolur, sayfa yenilemeye gerek yoktur.
+
+Ayar Redis'te tek bir JSON kaydında durur. Redis okunamazsa varsayılana
+(duyuru yok, bakım yok) düşülür — bir depolama kesintisi siteyi yanlışlıkla
+bakıma sokamaz.
 
 ## Panoda ne var
 
@@ -195,7 +247,9 @@ bir şey eklerseniz bu değişir.
 | Uç | Yetki | Açıklama |
 |---|---|---|
 | `POST /api/track` | açık | `track.js`'ten gelen sayfa görüntüleme sinyali |
+| `GET /api/site-config` | açık | Duyuru/bakım ayarı — `site.js` okur |
 | `POST /api/admin/login` | açık | `{"code": "123456"}` → oturum jetonu |
+| `GET · POST /api/admin/site` | oturum | Duyuru bandı ve bakım modu ayarı |
 | `GET /api/admin/ping` | oturum | Oturum hâlâ geçerli mi |
 | `GET /api/admin/health` | oturum | Servis sondaları, örnek ve önbellek durumu |
 | `GET /api/admin/stats?days=14` | oturum | Ziyaretçi ve kullanım analitiği |

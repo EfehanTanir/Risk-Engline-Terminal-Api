@@ -7,7 +7,7 @@
   <title>FINANSLA TERMINAL — YÖNETİM</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/terminal.css?v=21">
+  <link rel="stylesheet" href="css/terminal.css?v=23">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%2338bdf8'/></svg>">
 </head>
 <body>
@@ -55,6 +55,74 @@
         <!-- özet kutuları -->
         <section class="col-12">
           <div class="tiles" id="kpis"></div>
+        </section>
+
+        <!-- site kontrolü -->
+        <section class="col-12 panel">
+          <div class="panel-head"><span>SİTE KONTROLÜ</span>
+            <span class="right small" id="site-status"></span></div>
+          <div class="panel-body">
+            <div class="site-ctl">
+
+              <div class="site-ctl-col">
+                <label class="sc-head">
+                  <input type="checkbox" id="banner-active">
+                  <span>DUYURU BANDI</span>
+                </label>
+                <p class="small faint">Tüm sayfaların en üstünde görünür. Ziyaretçi kapatabilir.</p>
+                <label class="sc-label">Türkçe metin</label>
+                <input type="text" id="banner-tr" class="sc-input" maxlength="280"
+                       placeholder="Örn: TEFAS verilerinde geçici gecikme yaşanmaktadır.">
+                <label class="sc-label">İngilizce metin</label>
+                <input type="text" id="banner-en" class="sc-input" maxlength="280"
+                       placeholder="e.g. TEFAS data is temporarily delayed.">
+                <label class="sc-label">Renk / önem</label>
+                <select id="banner-level" class="sc-input">
+                  <option value="info">Bilgi (mavi)</option>
+                  <option value="warning">Uyarı (amber)</option>
+                  <option value="danger">Kritik (kırmızı)</option>
+                </select>
+                <label class="sc-label">Otomatik kalkma süresi</label>
+                <select id="banner-expiry" class="sc-input">
+                  <option value="0">Süresiz — elle kaldırana kadar</option>
+                  <option value="1">1 saat sonra</option>
+                  <option value="3">3 saat sonra</option>
+                  <option value="6">6 saat sonra</option>
+                  <option value="12">12 saat sonra</option>
+                  <option value="24">24 saat sonra</option>
+                  <option value="72">3 gün sonra</option>
+                </select>
+              </div>
+
+              <div class="site-ctl-col">
+                <label class="sc-head danger">
+                  <input type="checkbox" id="maint-active">
+                  <span>BAKIM MODU</span>
+                </label>
+                <p class="small faint">
+                  Ziyaretçiler tam ekran bakım bildirimi görür. Siz görmezsiniz.
+                  Nezaket bildirimidir, erişimi teknik olarak engellemez.
+                </p>
+                <label class="sc-label">Türkçe metin</label>
+                <input type="text" id="maint-tr" class="sc-input" maxlength="280"
+                       placeholder="Boş bırakılırsa varsayılan metin kullanılır.">
+                <label class="sc-label">İngilizce metin</label>
+                <input type="text" id="maint-en" class="sc-input" maxlength="280"
+                       placeholder="Leave empty to use the default text.">
+              </div>
+
+            </div>
+
+            <div class="sc-preview" id="sc-preview"></div>
+
+            <div class="admin-actions" style="margin-top:14px">
+              <button class="btn primary" id="site-save">YAYINLA</button>
+              <button class="btn kill-btn" id="banner-kill" disabled>DUYURUYU KALDIR</button>
+              <button class="btn kill-btn" id="maint-kill" disabled>BAKIMI KAPAT</button>
+              <button class="btn" id="site-reload">GERİ AL</button>
+              <span class="small faint" id="site-saved" style="align-self:center"></span>
+            </div>
+          </div>
         </section>
 
         <!-- trafik grafiği -->
@@ -154,8 +222,8 @@
     <span class="right" id="api-target"></span>
   </footer>
 
-  <script src="js/config.js?v=21"></script>
-  <script src="js/ui.js?v=21"></script>
-  <script src="js/admin.js?v=21"></script>
+  <script src="js/config.js?v=23"></script>
+  <script src="js/ui.js?v=23"></script>
+  <script src="js/admin.js?v=23"></script>
 </body>
 </html>

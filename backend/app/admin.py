@@ -23,7 +23,7 @@ import requests
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from . import analytics, store, totp
+from . import analytics, sitecfg, store, totp
 from . import tefas_client as tefas
 from . import yahoo
 
@@ -268,6 +268,51 @@ def api_reset(req: ResetRequest, x_admin_session: Optional[str] = Header(None)):
     if not analytics.reset(req.scope):
         raise HTTPException(400, f"Bilinmeyen kapsam '{req.scope}' veya depolama yok")
     return {"ok": True, "scope": req.scope}
+
+
+# ---- site kontrolü (duyuru bandı + bakım modu) ---------------------------
+
+@router.get("/api/site-config")
+def api_site_config():
+    """Halka açık: her sayfa açılışında okunur. Örnek başına 20 sn önbellekli,
+    Redis erişilemezse varsayılana (duyuru yok, bakım yok) düşer — depolama
+    kesintisi siteyi yanlışlıkla bakıma sokmasın."""
+    return sitecfg.get_config()
+
+
+class SiteBanner(BaseModel):
+    active: bool = False
+    level: str = "info"
+    tr: str = Field(default="", max_length=400)
+    en: str = Field(default="", max_length=400)
+    expiresHours: float = Field(default=0, ge=0, le=720)   # 0 = süresiz
+
+
+class SiteMaintenance(BaseModel):
+    active: bool = False
+    tr: str = Field(default="", max_length=400)
+    en: str = Field(default="", max_length=400)
+
+
+class SiteConfigRequest(BaseModel):
+    banner: SiteBanner = SiteBanner()
+    maintenance: SiteMaintenance = SiteMaintenance()
+
+
+@router.get("/api/admin/site")
+def api_site_get(x_admin_session: Optional[str] = Header(None)):
+    require_session(x_admin_session)
+    return sitecfg.get_config(fresh=True)      # panelde bayat veri gösterme
+
+
+@router.post("/api/admin/site")
+def api_site_save(req: SiteConfigRequest,
+                  x_admin_session: Optional[str] = Header(None)):
+    require_session(x_admin_session)
+    saved = sitecfg.save_config(req.model_dump())
+    if saved is None:
+        raise HTTPException(503, "Depolama yapılandırılmamış — Upstash gerekli")
+    return saved
 
 
 def note_request() -> None:
