@@ -1,3 +1,7 @@
+# Finansla Terminal - https://terminal.finansla.net
+# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
+# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+
 """Site geneli kontrol: duyuru bandı ve bakım modu.
 
 Yönetim panelinden yazılan ayar Redis'te tek bir JSON kaydında durur; her
@@ -19,7 +23,15 @@ from typing import Optional
 
 from . import store
 
+# İki ayrı site, iki ayrı ayar: terminalde duyuru açmak finansla.net'i
+# etkilemesin. "terminal" varsayılan, çünkü terminalin site.js'i parametresiz
+# çağırıyor ve o davranış bozulmamalı.
+SCOPES = ("terminal", "web")
 KEY = "fl:site:config"
+
+
+def _key(scope: str) -> str:
+    return KEY if scope == "terminal" else f"{KEY}:{scope}"
 CACHE_TTL = 20          # saniye, örnek başına
 MAX_TEXT = 280          # duyuru metni üst sınırı
 LEVELS = ("info", "warning", "danger")
@@ -30,7 +42,7 @@ DEFAULT = {
     "updatedAt": 0,
 }
 
-_cache: dict = {"t": 0.0, "data": None}
+_cache: dict = {}   # scope -> {"t": ..., "data": ...}
 
 
 def _clean_text(value) -> str:
@@ -80,18 +92,20 @@ def _apply_expiry(cfg: dict) -> dict:
     return cfg
 
 
-def get_config(fresh: bool = False) -> dict:
+def get_config(fresh: bool = False, scope: str = "terminal") -> dict:
     """Yürürlükteki ayar. `fresh=True` önbelleği atlar (yönetim paneli için)."""
+    scope = scope if scope in SCOPES else "terminal"
+    slot = _cache.setdefault(scope, {"t": 0.0, "data": None})
     now = time.time()
-    if not fresh and _cache["data"] is not None and now - _cache["t"] < CACHE_TTL:
+    if not fresh and slot["data"] is not None and now - slot["t"] < CACHE_TTL:
         # Önbellek tazeyken bile süreyi yeniden değerlendir: 20 sn'lik pencere
         # dolmuş bir duyuruyu yayında tutmasın.
-        return _apply_expiry(_cache["data"])
+        return _apply_expiry(slot["data"])
 
     if not store.enabled():
         return normalize(None)
 
-    raw: Optional[str] = store.cmd("GET", KEY)
+    raw: Optional[str] = store.cmd("GET", _key(scope))
     if not raw:
         cfg = normalize(None)
     else:
@@ -101,11 +115,11 @@ def get_config(fresh: bool = False) -> dict:
             # Bozuk kayıt: siteyi bakıma sokmaktansa varsayılana dön
             cfg = normalize(None)
 
-    _cache.update(t=now, data=cfg)
+    slot.update(t=now, data=cfg)
     return _apply_expiry(cfg)
 
 
-def save_config(raw) -> Optional[dict]:
+def save_config(raw, scope: str = "terminal") -> Optional[dict]:
     """Ayarı yaz ve yazılan hâlini döndür; depolama yoksa None.
 
     Panel süreyi saat cinsinden (`expiresHours`) yollar; mutlak zamanı burada
@@ -123,7 +137,9 @@ def save_config(raw) -> Optional[dict]:
 
     cfg = normalize(raw)
     cfg["updatedAt"] = int(time.time())
-    if store.cmd("SET", KEY, json.dumps(cfg, ensure_ascii=False)) is None:
+    scope = scope if scope in SCOPES else "terminal"
+    if store.cmd("SET", _key(scope), json.dumps(cfg, ensure_ascii=False)) is None:
         return None
-    _cache.update(t=time.time(), data=cfg)   # bu örnek anında güncel olsun
+    # bu örnek anında güncel olsun
+    _cache[scope] = {"t": time.time(), "data": cfg}
     return cfg

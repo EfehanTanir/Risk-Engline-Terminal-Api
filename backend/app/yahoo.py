@@ -1,3 +1,7 @@
+# Finansla Terminal - https://terminal.finansla.net
+# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
+# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+
 """Yahoo Finance access via yfinance, shaped to the terminal's API contract."""
 from __future__ import annotations
 

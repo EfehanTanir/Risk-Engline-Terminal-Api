@@ -1,3 +1,7 @@
+# Finansla Terminal - https://terminal.finansla.net
+# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
+# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+
 """TOTP (RFC 6238) doğrulama ve imzalı oturum jetonu — sadece stdlib.
 
 Admin paneline giriş tek adımdır: kullanıcı adı ve şifre yoktur, yalnızca

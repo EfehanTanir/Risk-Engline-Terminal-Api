@@ -1,3 +1,7 @@
+# Finansla Terminal - https://terminal.finansla.net
+# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
+# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+
 """Optional Upstash Redis (REST) storage, used only by the admin analytics.
 
 Vercel functions have no disk and no memory shared between instances, so visit

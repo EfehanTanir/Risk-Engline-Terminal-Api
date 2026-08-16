@@ -1,3 +1,7 @@
+# Finansla Terminal - https://terminal.finansla.net
+# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
+# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+
 """Google News RSS + lightweight lexicon sentiment (Turkish + English financial
 vocabulary). A heuristic indicator — the UI renders it as a green/red/gray dot."""
 from __future__ import annotations

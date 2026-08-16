@@ -1,3 +1,7 @@
+# Finansla Terminal - https://terminal.finansla.net
+# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
+# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+
 """Admin panel API: servis sağlığı, ziyaretçi analitiği ve halka açık izleme
 sinyali (/api/track).
 
@@ -23,7 +27,7 @@ import requests
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from . import analytics, sitecfg, store, totp
+from . import analytics, posts, sitecfg, store, totp
 from . import tefas_client as tefas
 from . import yahoo
 
@@ -273,11 +277,14 @@ def api_reset(req: ResetRequest, x_admin_session: Optional[str] = Header(None)):
 # ---- site kontrolü (duyuru bandı + bakım modu) ---------------------------
 
 @router.get("/api/site-config")
-def api_site_config():
+def api_site_config(scope: str = "terminal"):
     """Halka açık: her sayfa açılışında okunur. Örnek başına 20 sn önbellekli,
     Redis erişilemezse varsayılana (duyuru yok, bakım yok) düşer — depolama
-    kesintisi siteyi yanlışlıkla bakıma sokmasın."""
-    return sitecfg.get_config()
+    kesintisi siteyi yanlışlıkla bakıma sokmasın.
+
+    `scope`: "terminal" (varsayılan) veya "web" (finansla.net). Terminalin
+    site.js'i parametresiz çağırdığı için varsayılan değişmemeli."""
+    return sitecfg.get_config(scope=scope)
 
 
 class SiteBanner(BaseModel):
@@ -300,19 +307,84 @@ class SiteConfigRequest(BaseModel):
 
 
 @router.get("/api/admin/site")
-def api_site_get(x_admin_session: Optional[str] = Header(None)):
+def api_site_get(scope: str = "terminal",
+                 x_admin_session: Optional[str] = Header(None)):
     require_session(x_admin_session)
-    return sitecfg.get_config(fresh=True)      # panelde bayat veri gösterme
+    return sitecfg.get_config(fresh=True, scope=scope)   # panelde bayat veri gösterme
 
 
 @router.post("/api/admin/site")
-def api_site_save(req: SiteConfigRequest,
+def api_site_save(req: SiteConfigRequest, scope: str = "terminal",
                   x_admin_session: Optional[str] = Header(None)):
     require_session(x_admin_session)
-    saved = sitecfg.save_config(req.model_dump())
+    saved = sitecfg.save_config(req.model_dump(), scope=scope)
     if saved is None:
         raise HTTPException(503, "Depolama yapılandırılmamış — Upstash gerekli")
     return saved
+
+
+# ---- eğitim yazıları -----------------------------------------------------
+
+class FaqItem(BaseModel):
+    q: str = Field(default="", max_length=300)
+    a: str = Field(default="", max_length=1000)
+
+
+class PostRequest(BaseModel):
+    slug: str = Field(default="", max_length=120)
+    oldSlug: str = Field(default="", max_length=120)
+    title: str = Field(default="", max_length=300)
+    category: str = Field(default="", max_length=80)
+    excerpt: str = Field(default="", max_length=600)
+    metaTitle: str = Field(default="", max_length=300)
+    metaDescription: str = Field(default="", max_length=300)
+    cover: str = Field(default="", max_length=300)
+    body: str = Field(default="", max_length=120_000)
+    date: str = Field(default="", max_length=10)
+    published: bool = False
+    faq: list[FaqItem] = []
+
+
+@router.get("/api/admin/posts")
+def api_posts_list(x_admin_session: Optional[str] = Header(None)):
+    """Taslaklar dahil tüm yazılar (gövde metni olmadan)."""
+    require_session(x_admin_session)
+    return {"posts": posts.listing()}
+
+
+@router.get("/api/admin/post")
+def api_post_get(slug: str = Query(..., min_length=1),
+                 x_admin_session: Optional[str] = Header(None)):
+    require_session(x_admin_session)
+    post = posts.get(slug)
+    if post is None:
+        raise HTTPException(404, "Yazı bulunamadı")
+    return post
+
+
+@router.post("/api/admin/post")
+def api_post_save(req: PostRequest,
+                  x_admin_session: Optional[str] = Header(None)):
+    require_session(x_admin_session)
+    if not req.title.strip():
+        raise HTTPException(400, "Başlık boş olamaz")
+    saved = posts.save(req.model_dump(), old_slug=req.oldSlug or None)
+    if saved is None:
+        raise HTTPException(503, "Depolama yapılandırılmamış — Upstash gerekli")
+    return saved
+
+
+class SlugRequest(BaseModel):
+    slug: str = Field(..., min_length=1, max_length=120)
+
+
+@router.post("/api/admin/post/delete")
+def api_post_delete(req: SlugRequest,
+                    x_admin_session: Optional[str] = Header(None)):
+    require_session(x_admin_session)
+    if not posts.delete(req.slug):
+        raise HTTPException(503, "Silinemedi — depolama yok")
+    return {"ok": True, "slug": req.slug}
 
 
 def note_request() -> None:

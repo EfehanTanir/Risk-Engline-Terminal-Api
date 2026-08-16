@@ -1,3 +1,7 @@
+# Finansla Terminal - https://terminal.finansla.net
+# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
+# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+
 """Visitor tracking and usage analytics on top of Upstash Redis.
 
 Privacy: raw IP addresses are never stored. A visitor is identified by
@@ -78,12 +82,21 @@ def record(*, page: str, visitor: str, country: str = "", city: str = "",
     now = int(time.time())
     day = _day()
 
+    # Hangi siteden geldiği sayfa adından anlaşılıyor: landing "site:" önekiyle
+    # gönderiyor, terminal göndermiyor. Böylece tek uçtan iki mülkü ayrı ayrı
+    # sayabiliyoruz — panelde "terminal vs finansla.net" kırılımı buradan çıkıyor.
+    prop = "web" if page.startswith("site:") else "term"
+
     cmds: list[list] = [
         ["INCR", "fl:pv:total"],
         ["INCR", f"fl:pv:d:{day}"],
         ["EXPIRE", f"fl:pv:d:{day}", DAY_TTL],
         ["PFADD", f"fl:uv:d:{day}", visitor],
         ["EXPIRE", f"fl:uv:d:{day}", DAY_TTL],
+        ["INCR", f"fl:pv:d:{day}:{prop}"],
+        ["EXPIRE", f"fl:pv:d:{day}:{prop}", DAY_TTL],
+        ["PFADD", f"fl:uv:d:{day}:{prop}", visitor],
+        ["EXPIRE", f"fl:uv:d:{day}:{prop}", DAY_TTL],
         ["ZINCRBY", "fl:page", 1, page],
         ["ZADD", "fl:live", now, visitor],
     ]
@@ -145,6 +158,11 @@ def summary(days: int = 14) -> dict:
         ["ZREVRANGE", "fl:geo", 0, TOP_N - 1, "WITHSCORES"],
         ["ZREVRANGE", "fl:ref", 0, TOP_N - 1, "WITHSCORES"],
         ["LRANGE", "fl:recent", 0, RECENT_MAX - 1],
+        # mülk kırılımı: terminal ve finansla.net ayrı ayrı
+        ["MGET"] + [f"{k}:term" for k in day_keys],
+        ["MGET"] + [f"{k}:web" for k in day_keys],
+        ["PFCOUNT"] + [f"{k}:term" for k in uv_keys],
+        ["PFCOUNT"] + [f"{k}:web" for k in uv_keys],
     ]
     res = store.pipeline(cmds)
     if res is None:
@@ -168,10 +186,34 @@ def summary(days: int = 14) -> dict:
         except Exception:
             continue
 
+    def prop_series(raw_list) -> list[dict]:
+        raw_list = raw_list or []
+        return [{"date": _day(i), "views": num(raw_list[i] if i < len(raw_list) else 0)}
+                for i in range(days)][::-1]
+
+    term_series = prop_series(res[13])
+    web_series = prop_series(res[14])
+
     period_views = sum(p["views"] for p in series)
     return {
         "enabled": True,
         "days": days,
+        # İki siteyi ayrı ayrı görebilmek için. Toplamlarla birebir tutmayabilir:
+        # mülk sayaçları bu özellik eklendikten sonra başladı, eski günler boş.
+        "properties": {
+            "terminal": {
+                "series": term_series,
+                "periodViews": sum(p["views"] for p in term_series),
+                "periodVisitors": num(res[15]),
+                "todayViews": term_series[-1]["views"] if term_series else 0,
+            },
+            "web": {
+                "series": web_series,
+                "periodViews": sum(p["views"] for p in web_series),
+                "periodVisitors": num(res[16]),
+                "todayViews": web_series[-1]["views"] if web_series else 0,
+            },
+        },
         "totals": {
             "allTimeViews": num(res[0]),
             "periodViews": period_views,
