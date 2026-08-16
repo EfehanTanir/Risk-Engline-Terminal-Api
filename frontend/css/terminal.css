@@ -370,10 +370,40 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
 .chart-box { position: relative; width: 100%; height: 320px; }
 .chart-box.short { height: 220px; }
 .chart-box.tall { height: 380px; }
-/* Interactive chart (Lightweight Charts): full-width toggle button + container */
-.iachart-btn { display: block; width: 100%; margin-top: 10px; text-align: center; }
-.btn.iachart-btn.active { color: var(--amber); background: var(--panel-2); border-color: var(--amber); font-weight: 400; }
-.iachart { width: 100%; height: 360px; margin-top: 10px; }
+/* Interactive chart: eye-catching amber button that opens a large modal
+   (pro chart on the left + our Greeks/returns column on the right) */
+.iachart-btn {
+  display: block; width: 100%; margin-top: 10px; text-align: center;
+  background: var(--amber); color: #000; border-color: var(--amber);
+  font-weight: 700; letter-spacing: 1px; box-shadow: 0 0 12px rgba(255, 176, 0, 0.35);
+  animation: iaglow 2.2s ease-in-out infinite;
+}
+.iachart-btn:hover { background: #ffc233; color: #000; }
+@keyframes iaglow {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 176, 0, 0.30); }
+  50% { box-shadow: 0 0 18px rgba(255, 176, 0, 0.55); }
+}
+.ia-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0, 0, 0, 0.78);
+  display: flex; align-items: center; justify-content: center; padding: 18px; }
+.ia-modal { width: 94vw; max-width: 1500px; height: 90vh; background: var(--panel);
+  border: 1px solid var(--border-hi); display: flex; flex-direction: column;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6); }
+.ia-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--amber);
+  font-weight: 700; letter-spacing: 1px; }
+.ia-x { cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; }
+.ia-x:hover { color: var(--ink); }
+.ia-body { flex: 1; display: flex; min-height: 0; }
+.ia-main { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; }
+.ia-side { width: 320px; flex: none; border-left: 1px solid var(--border); overflow-y: auto; }
+.ia-side-sec { padding: 12px; border-bottom: 1px solid var(--border); }
+.ia-side-h { color: var(--muted); font-size: 11px; letter-spacing: 1px; margin-bottom: 8px; }
+.ia-toolbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px; border-bottom: 1px solid var(--border); }
+.ia-toolbar .ia-ranges, .ia-toolbar .ia-toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+.ia-toolbar .ia-toggles { margin-left: auto; }
+.ia-canvas { flex: 1; min-height: 0; width: 100%; }
+.ia-range.active { color: #000; background: var(--amber); border-color: var(--amber); font-weight: 700; }
+.ia-tg.active { color: #000; background: var(--tgc, var(--amber)); border-color: var(--tgc, var(--amber)); font-weight: 700; }
 
 /* ---------- legal disclaimer (sits below the status bar) ---------- */
 .disclaimer {
@@ -436,7 +466,9 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
   .chart-box { height: 240px; }
   .chart-box.tall { height: 260px; }
   .chart-box.short { height: 200px; }
-  .iachart { height: 300px; }
+  .ia-modal { width: 100vw; height: 100vh; }
+  .ia-body { flex-direction: column; }
+  .ia-side { width: auto; border-left: none; border-top: 1px solid var(--border); }
 
   .news-list { grid-template-columns: 1fr; }
   .tiles { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -468,3 +500,113 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
   .tape:hover .tape-track { animation-play-state: running; }
   .result-row, .btn { -webkit-tap-highlight-color: rgba(255, 176, 0, 0.15); }
 }
+
+
+/* ============================================================
+   ADMIN PANEL (admin.html) — internal dashboard
+   Cyan accent throughout so it never reads as a public page.
+   ============================================================ */
+.admin-tag {
+  border-color: var(--cyan); color: var(--cyan);
+  background: rgba(56, 189, 248, 0.10); font-weight: 700;
+}
+.admin-refresh-note { white-space: nowrap; letter-spacing: 1px; }
+
+.admin-input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  color: var(--ink); font-family: var(--mono); font-size: 14px;
+  padding: 9px 12px; outline: none; letter-spacing: 2px;
+}
+.admin-input:focus { border-color: var(--cyan); }
+
+/* ---- traffic bars (no chart library: fewer things to fail) ---- */
+.admin-bars {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 190px; padding-bottom: 18px;
+}
+.admin-bar {
+  flex: 1; height: 100%; min-width: 4px; position: relative;
+  display: flex; align-items: flex-end;
+}
+.admin-bar-fill {
+  width: 100%; background: var(--cyan); opacity: 0.75;
+  transition: height 0.3s ease, opacity 0.15s;
+  min-height: 0;
+}
+.admin-bar:hover .admin-bar-fill { opacity: 1; background: var(--amber); }
+.admin-bar-label {
+  position: absolute; bottom: -17px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; color: var(--faint); white-space: nowrap;
+}
+/* Only label every other column once the range gets dense */
+.admin-bars[data-dense="1"] .admin-bar:nth-child(even) .admin-bar-label { display: none; }
+
+/* ---- leaderboard rows ---- */
+.admin-row {
+  position: relative; display: flex; align-items: baseline; gap: 10px;
+  padding: 6px 12px; border-bottom: 1px solid var(--border);
+  font-size: 12px; overflow: hidden;
+}
+.admin-row:last-child { border-bottom: none; }
+.admin-row-bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  opacity: 0.12; pointer-events: none;
+}
+.admin-row .k {
+  flex: 1; position: relative; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.admin-row .v { position: relative; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ---- service health ---- */
+.admin-health {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.admin-health:last-child { border-bottom: none; }
+.admin-health .dot { width: 9px; height: 9px; flex: none; border-radius: 50%; }
+.admin-health.ok .dot { background: var(--up); box-shadow: 0 0 7px rgba(47, 208, 126, 0.7); }
+.admin-health.bad .dot { background: var(--down); box-shadow: 0 0 7px rgba(255, 82, 82, 0.7); animation: blink 1s steps(1) infinite; }
+.admin-health .svc { flex: 1; letter-spacing: 1px; }
+.admin-health .ms { color: var(--muted); font-size: 11px; }
+.admin-health .ms.slow { color: var(--amber); }
+.admin-health .st { font-size: 10px; font-weight: 700; letter-spacing: 1px; min-width: 32px; text-align: right; }
+.admin-health.ok .st { color: var(--up); }
+.admin-health.bad .st { color: var(--down); }
+.admin-health .detail {
+  flex-basis: 100%; color: var(--down); font-size: 10.5px;
+  word-break: break-word; padding-left: 19px;
+}
+
+/* ---- live visitor feed ---- */
+.admin-feed { max-height: 340px; overflow-y: auto; }
+.admin-feed-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 11.5px;
+}
+.admin-feed-row:last-child { border-bottom: none; }
+.admin-feed-row .t { color: var(--cyan); min-width: 34px; }
+.admin-feed-row .p { color: var(--amber); min-width: 66px; letter-spacing: 1px; }
+.admin-feed-row .d { flex: 1; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-feed-row .w { color: var(--muted); white-space: nowrap; }
+.admin-feed-row .id { font-size: 10px; }
+
+/* ---- maintenance ---- */
+.admin-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.danger-btn { border-color: var(--down); color: var(--down); }
+.danger-btn:hover { background: rgba(255, 82, 82, 0.12); color: var(--down); border-color: var(--down); }
+
+@media (max-width: 640px) {
+  .admin-bars { height: 140px; }
+  .admin-bar-label { display: none; }
+  .admin-feed-row .w, .admin-feed-row .id { display: none; }
+  .admin-refresh-note { display: none; }
+}
+
+/* 6 haneli TOTP kodu girişi */
+.admin-code {
+  text-align: center; font-size: 30px; letter-spacing: 12px;
+  padding: 12px 0 12px 12px; font-weight: 700; color: var(--amber);
+}
+.admin-code::placeholder { color: var(--faint); letter-spacing: 12px; font-weight: 400; }
+#totp-countdown { letter-spacing: 1px; }

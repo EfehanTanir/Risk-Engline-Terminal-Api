@@ -119,20 +119,72 @@
       renderChart(Number(btn.dataset.days));
     });
 
-    // Interactive chart (Lightweight Charts over our own history) — lazy-built
-    // on first open. The Chart.js chart above is left completely untouched.
+    // Interactive chart — opens a large modal: our own Lightweight-Charts chart
+    // (time-range buttons, volatility-band toggle, BIST 100 / NASDAQ overlays)
+    // beside a column with OUR option Greeks and period returns. The Chart.js
+    // chart above is left untouched.
     const iaBtn = document.getElementById('ia-toggle');
-    const iaBox = document.getElementById('ia-chart');
-    let iaChart = null;
-    iaBtn.addEventListener('click', () => {
-      const opening = iaBox.hidden;
-      iaBox.hidden = !opening;
-      iaBtn.classList.toggle('active', opening);
-      iaBtn.textContent = opening ? t('chart.hide') : t('chart.interactive');
-      if (opening && !iaChart) {
-        iaChart = UI.interactiveChart(iaBox, fullHistory, { precision: quote.price < 10 ? 4 : 2 });
+    const iaOverlay = document.getElementById('ia-overlay');
+    document.getElementById('ia-title').textContent =
+      `${profile.symbol}${profile.longName ? ' · ' + profile.longName : ''}`;
+    let iaBuilt = false;
+
+    // Period returns from our own history (last close vs N days ago)
+    const periodReturns = () => {
+      if (fullHistory.length < 2) return [];
+      const lastClose = fullHistory[fullHistory.length - 1].close;
+      const ago = (days) => {
+        const cut = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+        const r = fullHistory.find((h) => h.date >= cut);
+        return r ? r.close : null;
+      };
+      const ytd = fullHistory.find((h) => h.date >= `${new Date().getFullYear()}-01-01`);
+      return [
+        [t('ret.1m'), ago(30)], [t('ret.3m'), ago(90)], [t('ret.6m'), ago(180)],
+        [t('ret.ytd'), ytd ? ytd.close : null], [t('ret.1y'), ago(365)],
+      ].map(([lbl, base]) => [lbl, base ? (lastClose / base - 1) * 100 : null]);
+    };
+
+    function buildInteractive() {
+      UI.interactiveChart(document.getElementById('ia-main'), fullHistory, {
+        precision: quote.price < 10 ? 4 : 2,
+        benchmarks: [
+          { key: 'bist', label: 'BIST 100', symbol: 'XU100.IS', color: UI.COLORS.cyan },
+          { key: 'nasdaq', label: 'NASDAQ', symbol: '^IXIC', color: UI.COLORS.violet },
+        ],
+      });
+
+      // Side column: our Greeks + period returns
+      let html = '';
+      if (greeks) {
+        const g = (side, key, dec = 4) => UI.fmtNum(greeks[side][key], dec);
+        html += `<div class="ia-side-sec"><div class="ia-side-h">${t('panel.greeks')}</div>
+          <table class="data">
+            <tr><th></th><th>${t('g.call')}</th><th>${t('g.put')}</th></tr>
+            <tr><td>DELTA Δ</td><td>${g('call', 'delta')}</td><td>${g('put', 'delta')}</td></tr>
+            <tr><td>GAMMA Γ</td><td>${g('call', 'gamma', 5)}</td><td>${g('put', 'gamma', 5)}</td></tr>
+            <tr><td>VEGA ν</td><td>${g('call', 'vega')}</td><td>${g('put', 'vega')}</td></tr>
+            <tr><td>THETA Θ</td><td>${g('call', 'theta')}</td><td>${g('put', 'theta')}</td></tr>
+            <tr><td>RHO ρ</td><td>${g('call', 'rho')}</td><td>${g('put', 'rho')}</td></tr>
+          </table></div>`;
       }
+      const rets = periodReturns();
+      if (rets.length) {
+        html += `<div class="ia-side-sec"><div class="ia-side-h">${t('chart.returns')}</div><div class="stat-list">` +
+          rets.map(([lbl, v]) => `<div class="row"><span class="k">${lbl}</span><span class="v ${UI.chgClass(v)}">${UI.fmtPctRaw(v, 2)}</span></div>`).join('') +
+          `</div></div>`;
+      }
+      document.getElementById('ia-side').innerHTML = html;
+    }
+
+    iaBtn.addEventListener('click', () => {
+      iaOverlay.hidden = false;
+      if (!iaBuilt) { buildInteractive(); iaBuilt = true; }
     });
+    const closeIA = () => { iaOverlay.hidden = true; };
+    document.getElementById('ia-x').addEventListener('click', closeIA);
+    iaOverlay.addEventListener('click', (e) => { if (e.target === iaOverlay) closeIA(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeIA(); });
 
     // Risk metrics
     if (risk) {

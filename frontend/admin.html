@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>FINANSLA TERMINAL — YÖNETİM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css?v=21">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%2338bdf8'/></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <span class="tag admin-tag">YÖNETİM</span>
+    <div class="topsearch">
+      <span class="admin-refresh-note small faint" id="last-refresh"></span>
+      <button class="btn" id="auto-toggle">OTO 10sn</button>
+      <button class="btn" id="refresh-btn">YENİLE</button>
+      <button class="btn" id="logout-btn" hidden>KİLİTLE</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- ---------- giriş ekranı ---------- -->
+    <section class="admin-gate" id="gate">
+      <div class="panel" style="max-width:420px;margin:70px auto">
+        <div class="panel-head"><span>YETKİLİ GİRİŞİ</span>
+          <span class="right small faint" id="totp-countdown"></span></div>
+        <div class="panel-body">
+          <p class="small muted" style="margin-bottom:14px">
+            Authenticator uygulamanızdaki <span class="amber">6 haneli kodu</span> girin.
+            Kullanıcı adı ve şifre yoktur.
+          </p>
+          <input type="text" id="code-input" class="admin-input admin-code" placeholder="000000"
+                 inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+                 spellcheck="false" aria-label="Doğrulama kodu">
+          <button class="btn primary" id="login-btn" style="width:100%;margin-top:12px;padding:9px">GİRİŞ</button>
+          <div class="error-box" id="gate-error" hidden></div>
+          <div class="small faint" style="margin-top:12px;line-height:1.6">
+            Kod 30 saniyede bir yenilenir. Oturum 8 saat geçerlidir ve
+            sekmeyi kapattığınızda silinir.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- pano ---------- -->
+    <section id="dash" hidden>
+      <div class="grid">
+
+        <!-- özet kutuları -->
+        <section class="col-12">
+          <div class="tiles" id="kpis"></div>
+        </section>
+
+        <!-- trafik grafiği -->
+        <section class="col-8 panel">
+          <div class="panel-head">
+            <span>TRAFİK</span>
+            <span class="right">
+              <button class="btn range-btn active" data-days="7">7G</button>
+              <button class="btn range-btn" data-days="14">14G</button>
+              <button class="btn range-btn" data-days="30">30G</button>
+              <button class="btn range-btn" data-days="90">90G</button>
+            </span>
+          </div>
+          <div class="panel-body">
+            <div class="admin-bars" id="traffic-bars"></div>
+          </div>
+        </section>
+
+        <!-- sistem sağlığı -->
+        <section class="col-4 panel">
+          <div class="panel-head"><span>SİSTEM SAĞLIĞI</span>
+            <span class="right small faint" id="health-age"></span></div>
+          <div class="panel-body tight">
+            <div id="health-list"><div class="loading">SONDALANIYOR</div></div>
+          </div>
+        </section>
+
+        <!-- canlı ziyaretçi akışı -->
+        <section class="col-6 panel">
+          <div class="panel-head"><span>CANLI AKIŞ</span>
+            <span class="right small faint">SON 60 OLAY</span></div>
+          <div class="panel-body tight">
+            <div class="admin-feed" id="live-feed"><div class="loading">BEKLENİYOR</div></div>
+          </div>
+        </section>
+
+        <!-- örnek + önbellekler -->
+        <section class="col-6 panel">
+          <div class="panel-head"><span>SUNUCU ÖRNEĞİ VE ÖNBELLEKLER</span></div>
+          <div class="panel-body tight">
+            <div class="stat-list" id="instance-list"><div class="loading">YÜKLENİYOR</div></div>
+          </div>
+        </section>
+
+        <!-- sıralamalar -->
+        <section class="col-4 panel">
+          <div class="panel-head"><span>EN ÇOK ARANANLAR</span></div>
+          <div class="panel-body tight"><div id="top-queries"></div></div>
+        </section>
+        <section class="col-4 panel">
+          <div class="panel-head"><span>EN ÇOK GÖRÜNTÜLENEN HİSSELER</span></div>
+          <div class="panel-body tight"><div id="top-symbols"></div></div>
+        </section>
+        <section class="col-4 panel">
+          <div class="panel-head"><span>EN ÇOK GÖRÜNTÜLENEN FONLAR</span></div>
+          <div class="panel-body tight"><div id="top-funds"></div></div>
+        </section>
+
+        <section class="col-4 panel">
+          <div class="panel-head"><span>EN ÇOK ZİYARET EDİLEN SAYFALAR</span></div>
+          <div class="panel-body tight"><div id="top-pages"></div></div>
+        </section>
+        <section class="col-4 panel">
+          <div class="panel-head"><span>ÜLKELER</span></div>
+          <div class="panel-body tight"><div id="top-countries"></div></div>
+        </section>
+        <section class="col-4 panel">
+          <div class="panel-head"><span>YÖNLENDİREN SİTELER</span></div>
+          <div class="panel-body tight"><div id="top-referrers"></div></div>
+        </section>
+
+        <!-- bakım -->
+        <section class="col-12 panel">
+          <div class="panel-head"><span>BAKIM</span></div>
+          <div class="panel-body">
+            <div class="admin-actions">
+              <button class="btn" data-reset="queries">ARAMALARI TEMİZLE</button>
+              <button class="btn" data-reset="symbols">HİSSELERİ TEMİZLE</button>
+              <button class="btn" data-reset="funds">FONLARI TEMİZLE</button>
+              <button class="btn" data-reset="referrers">YÖNLENDİRENLERİ TEMİZLE</button>
+              <button class="btn" data-reset="recent">CANLI AKIŞI TEMİZLE</button>
+              <button class="btn danger-btn" data-reset="all">TÜM ANALİTİĞİ SIFIRLA</button>
+            </div>
+            <div class="small faint" style="margin-top:10px">
+              Sayaçlar Upstash Redis'te tutulur. Sıfırlama anında uygulanır ve geri alınamaz.
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live">● YÖNETİM</span>
+    <span>İÇ KULLANIM PANOSU — HERKESE AÇIK DEĞİL</span>
+    <span class="right" id="api-target"></span>
+  </footer>
+
+  <script src="js/config.js?v=21"></script>
+  <script src="js/ui.js?v=21"></script>
+  <script src="js/admin.js?v=21"></script>
+</body>
+</html>

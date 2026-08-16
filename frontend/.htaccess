@@ -1,0 +1,8 @@
+# terminal.finansla.net — Finansla Terminal
+# Yönetim panosu yalnızca /admin adresinden açılır (dosya adı gizlenir).
+RewriteEngine On
+RewriteRule ^admin/?$ /admin.html [L]
+
+# Doğrudan /admin.html isteyenleri temiz adrese yönlendir
+RewriteCond %{THE_REQUEST} \s/admin\.html[\s?] [NC]
+RewriteRule ^admin\.html$ /admin? [R=301,L]

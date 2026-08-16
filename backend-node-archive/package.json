@@ -1,0 +1,15 @@
+{
+  "name": "finansla-terminal-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend API for Finansla Terminal - Netlify Functions (Yahoo Finance + TEFAS + Google News + Risk Engine)",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "yahoo-finance2": "^2.13.3"
+  },
+  "scripts": {
+    "dev": "netlify dev"
+  }
+}

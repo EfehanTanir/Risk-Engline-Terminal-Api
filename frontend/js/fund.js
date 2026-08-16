@@ -96,20 +96,57 @@
       renderChart(Number(btn.dataset.days));
     });
 
-    // Interactive chart (Lightweight Charts over our own NAV history) — lazy-
-    // built on first open. The Chart.js NAV chart above is left untouched.
+    // Interactive chart — opens a large modal: our own NAV chart (Lightweight
+    // Charts, zoom/pan/crosshair) beside a column with TEFAS returns and risk.
+    // (TEFAS funds are not on TradingView and NAV has no OHLC, so no candles.)
     const iaBtn = document.getElementById('ia-toggle');
-    const iaBox = document.getElementById('ia-chart');
-    let iaChart = null;
-    iaBtn.addEventListener('click', () => {
-      const opening = iaBox.hidden;
-      iaBox.hidden = !opening;
-      iaBtn.classList.toggle('active', opening);
-      iaBtn.textContent = opening ? t('chart.hide') : t('chart.interactive');
-      if (opening && !iaChart) {
-        iaChart = UI.interactiveChart(iaBox, fullHistory, { precision: latest.price < 10 ? 6 : 4 });
+    const iaOverlay = document.getElementById('ia-overlay');
+    document.getElementById('ia-title').textContent =
+      `${profile.code}${profile.title ? ' · ' + profile.title : ''}`;
+    let iaBuilt = false;
+
+    function buildInteractive() {
+      UI.interactiveChart(document.getElementById('ia-main'), fullHistory, {
+        precision: latest.price < 10 ? 6 : 4,
+        benchmarks: [
+          { key: 'bist', label: 'BIST 100', symbol: 'XU100.IS', color: UI.COLORS.cyan },
+          { key: 'nasdaq', label: 'NASDAQ', symbol: '^IXIC', color: UI.COLORS.violet },
+        ],
+      });
+
+      let html = '';
+      const R = returns || {};
+      const rows = [
+        [t('ret.1m'), R['1m']], [t('ret.3m'), R['3m']], [t('ret.6m'), R['6m']],
+        [t('ret.ytd'), R.ytd], [t('ret.1y'), R['1y']],
+        [t('ret.3y'), R['3y']], [t('ret.5y'), R['5y']],
+      ].filter(([, v]) => v != null);
+      if (rows.length) {
+        html += `<div class="ia-side-sec"><div class="ia-side-h">${t('chart.returns')}</div><div class="stat-list">` +
+          rows.map(([lbl, v]) => `<div class="row"><span class="k">${lbl}</span><span class="v ${UI.chgClass(v)}">${UI.fmtPctRaw(v, 2)}</span></div>`).join('') +
+          `</div></div>`;
       }
+      if (risk) {
+        html += `<div class="ia-side-sec"><div class="ia-side-h">${t('panel.risk')}</div><div class="stat-list">` +
+          [
+            [t('r.annvol'), UI.fmtPct(risk.annVolatility), ''],
+            [t('r.sharpe'), UI.fmtNum(risk.sharpe), UI.chgClass(risk.sharpe)],
+            [t('r.sortino'), UI.fmtNum(risk.sortino), UI.chgClass(risk.sortino)],
+            [t('bar.maxdd'), UI.fmtPct(risk.maxDrawdown), ''],
+          ].map(([k, v, cls]) => `<div class="row"><span class="k">${k}</span><span class="v ${cls}">${v}</span></div>`).join('') +
+          `</div></div>`;
+      }
+      document.getElementById('ia-side').innerHTML = html;
+    }
+
+    iaBtn.addEventListener('click', () => {
+      iaOverlay.hidden = false;
+      if (!iaBuilt) { buildInteractive(); iaBuilt = true; }
     });
+    const closeIA = () => { iaOverlay.hidden = true; };
+    document.getElementById('ia-x').addEventListener('click', closeIA);
+    iaOverlay.addEventListener('click', (e) => { if (e.target === iaOverlay) closeIA(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeIA(); });
 
     // Allocation doughnut + legend list (fixed categorical hue order)
     if (allocation && allocation.slices.length) {

@@ -18,6 +18,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from . import admin as admin_mod
 from . import news as news_mod
 from . import risk
 from . import tefas_client as tefas
@@ -37,6 +38,17 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Admin panel: health checks, visitor analytics, and the public /api/track
+# beacon. Everything it needs is optional, so a missing ADMIN_TOTP_SECRET or
+# Upstash config degrades the panel without touching the rest of the API.
+app.include_router(admin_mod.router)
+
+
+@app.middleware("http")
+async def _count_requests(request, call_next):
+    admin_mod.note_request()
+    return await call_next(request)
 
 
 @app.get("/")

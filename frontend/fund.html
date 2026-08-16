@@ -6,7 +6,7 @@
   <title>FUND — FINANSLA TERMINAL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/terminal.css?v=17">
+  <link rel="stylesheet" href="css/terminal.css?v=21">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -62,8 +62,7 @@
           </div>
           <div class="panel-body">
             <div class="chart-box"><canvas id="price-chart"></canvas></div>
-            <button class="btn iachart-btn" id="ia-toggle" data-i18n="chart.interactive">INTERACTIVE CHART ▾</button>
-            <div class="iachart" id="ia-chart" hidden></div>
+            <button class="btn iachart-btn" id="ia-toggle" data-i18n="chart.interactive">INTERACTIVE CHART ⛶</button>
           </div>
         </section>
 
@@ -109,11 +108,19 @@
 
   <div class="disclaimer" data-i18n="legal.text"></div>
 
-  <script src="js/config.js?v=17"></script>
-  <script src="js/i18n.js?v=17"></script>
-  <script src="js/api.js?v=17"></script>
-  <script src="js/ui.js?v=17"></script>
-  <script src="js/fund.js?v=17"></script>
-  <script src="js/whatsnew.js?v=17"></script>
+  <div class="ia-overlay" id="ia-overlay" hidden>
+    <div class="ia-modal">
+      <div class="ia-head"><span id="ia-title"></span><span class="ia-x" id="ia-x">✕</span></div>
+      <div class="ia-body"><div class="ia-main" id="ia-main"></div><div class="ia-side" id="ia-side"></div></div>
+    </div>
+  </div>
+
+  <script src="js/config.js?v=21"></script>
+  <script src="js/i18n.js?v=21"></script>
+  <script src="js/api.js?v=21"></script>
+  <script src="js/ui.js?v=21"></script>
+  <script src="js/fund.js?v=21"></script>
+  <script src="js/whatsnew.js?v=21"></script>
+  <script src="js/track.js?v=21"></script>
 </body>
 </html>

@@ -41,6 +41,7 @@
     stocksBox.innerHTML = fundsBox.innerHTML = `<div class="loading">${I18N.t('searching')}</div>`;
     try {
       const { stocks, funds } = await API.search(q.trim());
+      if (window.FLTrack) FLTrack.search(q);   // feeds the admin "top searches"
       stocksBox.innerHTML = stocks.length
         ? stocks.map(stockRow).join('')
         : `<div class="loading" style="color:var(--faint)">${I18N.t('home.noequity')}</div>`;

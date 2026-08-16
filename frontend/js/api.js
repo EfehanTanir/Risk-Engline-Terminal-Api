@@ -14,6 +14,7 @@ const API = {
   marketNews(lang) { return this._get(`/market-news?lang=${lang || 'tr'}`); },
   funds() { return this._get('/funds'); },
   heatmap(market) { return this._get(`/heatmap?market=${market || 'bist'}`); },
+  history(symbol, period) { return this._get(`/history?symbol=${encodeURIComponent(symbol)}&period=${period || '1y'}`); },
   async portfolio(payload) {
     const res = await fetch(`${window.FINANSLA.API_BASE}/portfolio`, {
       method: 'POST',

@@ -145,18 +145,35 @@ const UI = {
     });
   },
 
-  /** Interactive area chart (TradingView Lightweight Charts) drawn from our
-   *  own {date, close} history — zoom, pan, crosshair; matches the dark theme. */
-  interactiveChart(el, history, { precision = 2 } = {}) {
+  /** Interactive chart (TradingView Lightweight Charts) from our own
+   *  {date, close} history, with a toolbar: time-range buttons, a volatility-
+   *  band toggle (20d MA ± 2σ) and benchmark overlays (BIST 100 / NASDAQ).
+   *  All data is ours; benchmarks: [{key,label,symbol,color}] lazy-fetched. */
+  interactiveChart(el, history, { precision = 2, benchmarks = [] } = {}) {
     if (typeof LightweightCharts === 'undefined' || !history || !history.length) return null;
-    const first = history[0].close, last = history[history.length - 1].close;
-    const color = last >= first ? UI.COLORS.green : UI.COLORS.red;
-    const chart = LightweightCharts.createChart(el, {
+    const t = (k) => (typeof I18N !== 'undefined' ? I18N.t(k) : k);
+
+    // Toolbar (range buttons + toggles) + chart canvas
+    el.innerHTML = '';
+    const RANGES = [['1m', 30], ['3m', 90], ['6m', 180], ['1y', 365], ['all', 0]];
+    const bar = document.createElement('div');
+    bar.className = 'ia-toolbar';
+    bar.innerHTML =
+      '<span class="ia-ranges">' +
+        RANGES.map(([k, d]) => `<button class="btn ia-range${d === 365 ? ' active' : ''}" data-days="${d}">${t('range.' + k)}</button>`).join('') +
+      '</span><span class="ia-toggles">' +
+        `<button class="btn ia-tg" data-tg="bands">${t('chart.bands')}</button>` +
+        benchmarks.map((b) => `<button class="btn ia-tg" data-tg="bm" data-key="${b.key}" style="--tgc:${b.color}">${UI.esc(b.label)}</button>`).join('') +
+      '</span>';
+    const canvas = document.createElement('div');
+    canvas.className = 'ia-canvas';
+    el.appendChild(bar);
+    el.appendChild(canvas);
+
+    const chart = LightweightCharts.createChart(canvas, {
       autoSize: true,
-      layout: {
-        background: { type: 'solid', color: 'rgba(0,0,0,0)' },
-        textColor: '#7e8fa0', fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
-      },
+      layout: { background: { type: 'solid', color: 'rgba(0,0,0,0)' },
+        textColor: '#7e8fa0', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 },
       grid: { vertLines: { color: '#141f2b' }, horzLines: { color: '#141f2b' } },
       rightPriceScale: { borderColor: '#1c2936' },
       timeScale: { borderColor: '#1c2936' },
@@ -166,13 +183,101 @@ const UI = {
         horzLine: { color: '#ffb000', width: 1, labelBackgroundColor: '#ffb000' },
       },
     });
-    const series = chart.addAreaSeries({
-      lineColor: color, topColor: color + '44', bottomColor: color + '05',
+    const area = chart.addAreaSeries({
       lineWidth: 2, priceLineVisible: false,
       priceFormat: { type: 'price', precision, minMove: 1 / Math.pow(10, precision) },
     });
-    series.setData(history.map((h) => ({ time: h.date, value: h.close })));
-    chart.timeScale().fitContent();
+
+    const slice = (h, d) => {
+      if (!d) return h;
+      const cut = new Date(Date.now() - d * 864e5).toISOString().slice(0, 10);
+      return h.filter((x) => x.date >= cut);
+    };
+
+    let days = 365, bandsOn = false, bands = null;
+    const bm = {};  // key -> { on, data, series }
+
+    function drawBands() {
+      if (bandsOn) {
+        const s = slice(history, days), win = 20, k = 2, up = [], mid = [], lo = [];
+        for (let i = win - 1; i < s.length; i++) {
+          let sum = 0;
+          for (let j = i - win + 1; j <= i; j++) sum += s[j].close;
+          const m = sum / win;
+          let v = 0;
+          for (let j = i - win + 1; j <= i; j++) v += (s[j].close - m) ** 2;
+          const sd = Math.sqrt(v / win);
+          mid.push({ time: s[i].date, value: m });
+          up.push({ time: s[i].date, value: m + k * sd });
+          lo.push({ time: s[i].date, value: m - k * sd });
+        }
+        if (!bands) {
+          const o = { lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false };
+          bands = {
+            up: chart.addLineSeries({ ...o, color: 'rgba(255,176,0,0.45)' }),
+            mid: chart.addLineSeries({ ...o, color: 'rgba(255,176,0,0.85)', lineStyle: 2 }),
+            lo: chart.addLineSeries({ ...o, color: 'rgba(255,176,0,0.45)' }),
+          };
+        }
+        bands.up.setData(up); bands.mid.setData(mid); bands.lo.setData(lo);
+      } else if (bands) {
+        chart.removeSeries(bands.up); chart.removeSeries(bands.mid); chart.removeSeries(bands.lo);
+        bands = null;
+      }
+    }
+
+    async function drawBenchmark(b) {
+      const st = bm[b.key];
+      if (!st || !st.on) return;
+      if (!st.data) {
+        try { st.data = (await API.history(b.symbol, '1y')).history || []; }
+        catch (e) { st.data = []; }
+      }
+      if (!st.series) {
+        st.series = chart.addLineSeries({ color: b.color, lineWidth: 1, priceScaleId: 'ovl_' + b.key,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        chart.priceScale('ovl_' + b.key).applyOptions({ visible: false, scaleMargins: { top: 0.1, bottom: 0.1 } });
+      }
+      st.series.setData(slice(st.data, days).map((x) => ({ time: x.date, value: x.close })));
+    }
+
+    function refreshMain() {
+      const s = slice(history, days);
+      const f = s.length ? s[0].close : 0, l = s.length ? s[s.length - 1].close : 0;
+      const c = l >= f ? UI.COLORS.green : UI.COLORS.red;
+      area.applyOptions({ lineColor: c, topColor: c + '44', bottomColor: c + '05' });
+      area.setData(s.map((x) => ({ time: x.date, value: x.close })));
+      drawBands();
+      benchmarks.forEach(drawBenchmark);
+      chart.timeScale().fitContent();
+    }
+
+    bar.addEventListener('click', (e) => {
+      const rb = e.target.closest('button[data-days]');
+      if (rb) {
+        days = Number(rb.dataset.days);
+        bar.querySelectorAll('.ia-range').forEach((x) => x.classList.remove('active'));
+        rb.classList.add('active');
+        refreshMain();
+        return;
+      }
+      const tg = e.target.closest('button[data-tg]');
+      if (!tg) return;
+      if (tg.dataset.tg === 'bands') {
+        bandsOn = !bandsOn;
+        tg.classList.toggle('active', bandsOn);
+        drawBands();
+      } else {
+        const b = benchmarks.find((x) => x.key === tg.dataset.key);
+        const st = bm[b.key] || (bm[b.key] = { on: false, data: null, series: null });
+        st.on = !st.on;
+        tg.classList.toggle('active', st.on);
+        if (st.on) drawBenchmark(b);
+        else if (st.series) { chart.removeSeries(st.series); st.series = null; }
+      }
+    });
+
+    refreshMain();
     return chart;
   },
 
