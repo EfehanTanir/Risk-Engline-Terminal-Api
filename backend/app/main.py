@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from . import admin as admin_mod
+from . import gold as gold_mod
 from . import news as news_mod
 from . import risk
 from . import tefas_client as tefas
@@ -95,6 +96,18 @@ def api_quotes(symbols: str = Query(...)):
 
 
 # ---- stock detail --------------------------------------------------------
+
+# ---- gold (spot + Turkish market) ---------------------------------------
+
+@app.get("/api/gold")
+def api_gold():
+    """Kur & Altın sayfasının fiyat kaynakları.
+
+    Yahoo spot altın vermediği (GC=F vadeli kontrat) için ayrı kaynaklardan
+    çekilir. Ayrıntılı gerekçe: app/gold.py başlığı.
+    """
+    return gold_mod.payload()
+
 
 @app.get("/api/stock")
 def api_stock(symbol: str = Query(...)):

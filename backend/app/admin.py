@@ -27,7 +27,7 @@ import requests
 from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from . import analytics, posts, sitecfg, store, totp
+from . import analytics, gold, posts, sitecfg, store, totp
 from . import tefas_client as tefas
 from . import yahoo
 
@@ -204,13 +204,36 @@ def _probe_news():
     return b"<item" in resp.content or b"<entry" in resp.content
 
 
+# Altın kaynakları. Kasten gold.spot()/turkish() DEĞİL doğrudan HTTP: o
+# fonksiyonlar 60 sn önbellekli ve hata durumunda bayat veri döndürüyor,
+# yani ölü bir kaynağı sağlıklı gösterebilirdi. Sağlık kontrolü gerçeği
+# ölçmeli, önbelleği değil.
+def _probe_gold_spot():
+    resp = requests.get(gold.SPOT_URL, timeout=8)
+    resp.raise_for_status()
+    return bool(resp.json().get("price"))
+
+
+def _probe_gold_tr():
+    resp = requests.get(gold.TR_URL, timeout=8)
+    resp.raise_for_status()
+    body = resp.json()
+    return bool(isinstance(body, dict) and body.get("gram-altin"))
+
+
 @router.get("/api/admin/health")
 def api_health(x_admin_session: Optional[str] = Header(None)):
     require_session(x_admin_session)
 
-    probes = {"yahoo": _probe_yahoo, "tefas": _probe_tefas, "news": _probe_news}
+    probes = {
+        "yahoo": _probe_yahoo,
+        "tefas": _probe_tefas,
+        "news": _probe_news,
+        "goldSpot": _probe_gold_spot,
+        "goldTr": _probe_gold_tr,
+    }
     results = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(probes)) as pool:
         futures = {name: pool.submit(_timed, fn) for name, fn in probes.items()}
         for name, fut in futures.items():
             try:
