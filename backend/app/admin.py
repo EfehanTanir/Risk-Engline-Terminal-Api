@@ -111,9 +111,19 @@ def api_login(req: LoginRequest, request: Request):
 
 @router.get("/api/admin/ping")
 def api_admin_ping(x_admin_session: Optional[str] = Header(None)):
-    """Mevcut oturumun hâlâ geçerli olup olmadığını ucuza kontrol eder."""
+    """Mevcut oturumun hâlâ geçerli olup olmadığını ucuza kontrol eder.
+
+    Panellerin üst barındaki güvenlik rozeti de buradan besleniyor: /health
+    beş dış sonda çalıştırdığı için sırf rozet uğruna çağrılamaz, burası ise
+    tek Redis PING kadar ucuz.
+
+    `loginRateLimited` şu an `analyticsEnabled` ile aynı değeri taşıyor
+    (ikisi de Upstash'e bağlı) ama AYRI alan olarak dönüyor: ileride biri
+    değişirse panelin okuduğu anlam bozulmasın.
+    """
     require_session(x_admin_session)
-    return {"ok": True, "analyticsEnabled": store.enabled()}
+    enabled = store.enabled()
+    return {"ok": True, "analyticsEnabled": enabled, "loginRateLimited": enabled}
 
 
 # ---- halka açık izleme sinyali -------------------------------------------
