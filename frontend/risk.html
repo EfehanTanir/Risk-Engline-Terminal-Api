@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+  <!-- Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+       SPDX-License-Identifier: LicenseRef-Finansla-Proprietary -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RISK ENGINE — FINANSLA TERMINAL</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/terminal.css?v=23">
+  <link rel="stylesheet" href="css/terminal.css?v=35">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
@@ -19,7 +21,8 @@
       <a href="compare.html"><b>F3</b><span data-i18n="nav.comp">COMPARE</span></a>
       <a href="screener.html"><b>F4</b><span data-i18n="nav.screen">SCREENER</span></a>
       <a href="heatmap.html"><b>F5</b><span data-i18n="nav.heat">HEATMAP</span></a>
-      <a href="https://derinlik.finansla.net" target="_blank" rel="noopener noreferrer" class="nav-ext"><b>F6</b><span data-i18n="nav.depth">CRYPTO DEPTH</span><span class="ext-arrow">↗</span></a>
+      <a href="kur.html"><b>F6</b><span data-i18n="nav.fx">KUR &amp; ALTIN</span></a>
+      <a href="https://derinlik.finansla.net" target="_blank" rel="noopener noreferrer" class="nav-ext"><b>F7</b><span data-i18n="nav.depth">CRYPTO DEPTH</span><span class="ext-arrow">↗</span></a>
     </nav>
     <div class="topsearch">
       <input id="top-search" data-i18n-ph="search.ph" placeholder="SEARCH…" autocomplete="off" spellcheck="false">
@@ -47,6 +50,12 @@
             <div class="dropdown" id="asset-dropdown" hidden></div>
           </div>
 
+          <!-- Hazır varlıklar: altın, döviz ve endeksler aramada ya hiç
+               çıkmıyor (GC=F) ya da yanıltıcı sonuç veriyor ("gold" araması
+               Gold.com adlı şirketi getiriyor). Tek tıkla ekleme bu boşluğu
+               kapatıyor — etiketler risk.js içindeki QUICK dizisinden gelir. -->
+          <div class="quick-assets" id="quick-assets"></div>
+
           <div id="asset-list" style="margin-top:12px"></div>
           <div class="small faint" id="weight-total" style="padding:8px 2px"></div>
 
@@ -61,6 +70,13 @@
           </div>
 
           <button class="btn primary" id="run" style="width:100%;margin-top:14px;padding:10px" disabled data-i18n="risk.run">▶ RUN RISK ANALYSIS</button>
+
+          <div class="pf-actions">
+            <button class="btn" id="pf-share" disabled data-i18n="risk.share">BAĞLANTIYI KOPYALA</button>
+            <button class="btn" id="pf-clear" disabled data-i18n="risk.clear">TEMİZLE</button>
+            <span class="small faint" id="pf-msg"></span>
+          </div>
+
           <div class="small faint" style="margin-top:10px" data-i18n="risk.builderhint"></div>
         </div>
       </section>
@@ -119,13 +135,13 @@
 
   <div class="disclaimer" data-i18n="legal.text"></div>
 
-  <script src="js/config.js?v=23"></script>
-  <script src="js/i18n.js?v=23"></script>
-  <script src="js/api.js?v=23"></script>
-  <script src="js/ui.js?v=23"></script>
-  <script src="js/risk.js?v=23"></script>
-  <script src="js/whatsnew.js?v=23"></script>
-  <script src="js/site.js?v=23"></script>
-  <script src="js/track.js?v=23"></script>
+  <script src="js/config.js?v=35"></script>
+  <script src="js/i18n.js?v=35"></script>
+  <script src="js/api.js?v=35"></script>
+  <script src="js/ui.js?v=35"></script>
+  <script src="js/risk.js?v=35"></script>
+  <script src="js/whatsnew.js?v=35"></script>
+  <script src="js/site.js?v=35"></script>
+  <script src="js/track.js?v=35"></script>
 </body>
 </html>

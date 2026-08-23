@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // TEFAS fund detail page: NAV chart, AUM/investors, allocation doughnut,
 // risk metrics, TEFAS period returns, sentiment news.
 (function () {
@@ -53,6 +56,11 @@
     // Identity: fund code with the fund's full title underneath
     document.getElementById('code').textContent = profile.code;
     document.getElementById('fullname').textContent = profile.title;
+    // İzleme listesi yıldızı — fonların canlı kotasyonu yok, ana sayfadaki
+    // panelde fiyatsız görünürler ama listede tutulabilirler.
+    if (typeof WL !== 'undefined') {
+      WL.initStar({ type: 'fund', id: profile.code, name: profile.title });
+    }
     // SERBEST (hedge) funds are restricted to qualified investors in Turkey -
     // flag them with a red tag so nobody mistakes them for retail products.
     const isSerbest = /SERBEST/i.test(`${profile.category || ''} ${profile.title || ''}`);

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <!-- Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+       SPDX-License-Identifier: LicenseRef-Finansla-Proprietary -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- ==========================================================
+       DİKKAT — BURADAKİ TÜM YOLLAR MUTLAK OLMALI ( / ile başlar )
+       Bu sayfa herhangi bir derinlikteki hatalı adreste gösterilir
+       (/abc/def/ghi gibi). Göreli yol kullanılırsa CSS ve JS kırılır,
+       ziyaretçi biçimsiz bir sayfa görür. Ana sitede tam olarak bu
+       hata yaşandı; tekrarlanmasın.
+
+       noindex ŞART: hata sayfasının kendisi aramada çıkmamalı.
+       Sunucu zaten HTTP 404 döndürüyor — .htaccess'teki ErrorDocument
+       satırı sayfayı gösterir ama durum kodunu DEĞİŞTİRMEZ. Kodu 200'e
+       çeviren bir yapılandırma (örn. ErrorDocument yerine yönlendirme)
+       Google için "soft 404" üretir; asla öyle kurma.
+       ========================================================== -->
+  <title>Sayfa bulunamadı — Finansla Terminal</title>
+  <meta name="robots" content="noindex, follow">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/terminal.css?v=35">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="/index.html"><b>F1</b><span data-i18n="nav.home">ANA SAYFA</span></a>
+      <a href="/risk.html"><b>F2</b><span data-i18n="nav.risk">RİSK MOTORU</span></a>
+      <a href="/compare.html"><b>F3</b><span data-i18n="nav.comp">KARŞILAŞTIR</span></a>
+      <a href="/screener.html"><b>F4</b><span data-i18n="nav.screen">TARAYICI</span></a>
+      <a href="/heatmap.html"><b>F5</b><span data-i18n="nav.heat">ISI HARİTASI</span></a>
+      <a href="/kur.html"><b>F6</b><span data-i18n="nav.fx">KUR &amp; ALTIN</span></a>
+      <a href="https://derinlik.finansla.net" target="_blank" rel="noopener noreferrer" class="nav-ext"><b>F7</b><span data-i18n="nav.depth">KRİPTO DERİNLİK</span><span class="ext-arrow">↗</span></a>
+    </nav>
+    <div class="topsearch">
+      <input id="top-search" data-i18n-ph="search.ph" placeholder="ARA…" autocomplete="off" spellcheck="false">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="e404">
+      <div class="e404-code">404</div>
+      <h1 class="e404-title" data-i18n="e404.title">SİNYAL YOK</h1>
+      <p class="e404-text" data-i18n="e404.text">
+        Aradığınız sayfa bu terminalde bulunamadı. Adres yanlış yazılmış
+        veya sayfa taşınmış olabilir.
+      </p>
+      <div class="e404-path" id="e404-path"></div>
+
+      <div class="e404-links">
+        <a class="btn" href="/index.html" data-i18n="e404.home">ANA SAYFAYA DÖN</a>
+        <a class="btn" href="/kur.html" data-i18n="e404.fx">KUR &amp; ALTIN</a>
+        <a class="btn" href="/risk.html" data-i18n="e404.risk">RİSK MOTORU</a>
+      </div>
+
+      <p class="e404-hint" data-i18n="e404.hint">
+        Bir hisse veya fon mu arıyordunuz? Üstteki arama kutusunu kullanın —
+        BIST hisseleri ve 1.000'den fazla TEFAS fonu aranabilir.
+      </p>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● CANLI</span>
+    <span data-i18n="status.data">VERİ: YAHOO FINANCE · TEFAS · GOOGLE NEWS</span>
+    <span class="right" data-i18n="status.edu">YALNIZCA EĞİTİM AMAÇLIDIR — YATIRIM TAVSİYESİ DEĞİLDİR</span>
+  </footer>
+
+  <script src="/js/config.js?v=35"></script>
+  <script src="/js/i18n.js?v=35"></script>
+  <script src="/js/ui.js?v=35"></script>
+  <script src="/js/track.js?v=35"></script>
+  <script>
+    // Hangi adresin kırık olduğunu ziyaretçiye göster — yanlış yazılmış bir
+    // adresi kendi gözüyle görmek çoğu zaman sorunu anında çözer.
+    document.getElementById('e404-path').textContent = location.pathname;
+  </script>
+</body>
+</html>

@@ -6,3 +6,11 @@ RewriteRule ^admin/?$ /admin.html [L]
 # Doğrudan /admin.html isteyenleri temiz adrese yönlendir
 RewriteCond %{THE_REQUEST} \s/admin\.html[\s?] [NC]
 RewriteRule ^admin\.html$ /admin? [R=301,L]
+
+# Özel 404 sayfası.
+# ErrorDocument durum kodunu DEĞİŞTİRMEZ — sunucu yine HTTP 404 döner, sadece
+# gösterilen gövde bizim sayfamız olur. Doğru olan da budur.
+# ASLA buraya yönlendirme (R=301/302) veya ana sayfa koyma: o zaman bozuk adres
+# HTTP 200 ile içerik döndürür ve Google bunu "soft 404" sayar. Ana sitede tam
+# olarak bu hata yapıldı ve eski WordPress adresleri biçimsiz sayfalar gösterdi.
+ErrorDocument 404 /404.html

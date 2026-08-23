@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // F4 TEFAS Fund Screener: client-side filter/sort over the full fund universe
 // (/api/funds). SERBEST (qualified-investor) funds are flagged in red.
 (function () {

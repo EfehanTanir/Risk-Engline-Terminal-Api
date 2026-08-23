@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <!-- Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+       SPDX-License-Identifier: LicenseRef-Finansla-Proprietary -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- DİKKAT — bu sayfa terminalin diğer sayfalarından farklı yazılmıştır.
+       Diğer sayfalarda gövde metni İngilizce yazılır, i18n Türkçeye çevirir.
+       Burada tam tersi: arama motorlarını hedefleyen tek sayfa bu, ve Google'ın
+       JavaScript çalıştırmadan da Türkçe içerik görmesi gerekiyor. Bu yüzden
+       statik metinler HTML'e TÜRKÇE yazılır; data-i18n yalnızca EN'e çevirir. -->
+  <title>Gram Altın, Çeyrek Altın ve Döviz Kuru Hesaplama — Finansla Terminal</title>
+  <meta name="description" content="Canlı dolar, euro ve sterlin kuru ile ons altına göre hesaplanan gram altın, çeyrek altın, yarım ve tam altın has değerleri. Ücretsiz döviz çevirici ve altın hesaplama aracı.">
+  <link rel="canonical" href="https://terminal.finansla.net/kur.html">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://terminal.finansla.net/kur.html">
+  <meta property="og:title" content="Gram Altın, Çeyrek Altın ve Döviz Kuru Hesaplama">
+  <meta property="og:description" content="Canlı kurlar ve ons altından hesaplanan gram/çeyrek/yarım/tam altın has değerleri. Döviz çevirici ve altın hesaplayıcı.">
+  <meta property="og:locale" content="tr_TR">
+  <meta property="og:site_name" content="Finansla Terminal">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/terminal.css?v=35">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%23ffb000'/></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Gram altın nasıl hesaplanır?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Gram altın, ons altının dolar fiyatı ile dolar/TL kurunun çarpılıp bir ons içindeki gram sayısına (31,1035) bölünmesiyle bulunur. Formül: Gram Altın (TL) = Ons Altın (USD) × USD/TRY ÷ 31,1035. Bu değer saf altının piyasa karşılığıdır; kuyumcu satış fiyatı üzerine işçilik ve kâr payı eklenir."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Çeyrek altın kaç gram saf altın içerir?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ziynet çeyrek altın 1,754 gram ağırlığında ve 22 ayardır. 22 ayar altının saflığı binde 916 olduğundan çeyrek altın yaklaşık 1,607 gram saf altın içerir. Has değeri, bu miktarın gram altın fiyatıyla çarpılmasıyla bulunur."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Hesaplanan altın değeri neden kuyumcudaki fiyattan farklı?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Bu sayfadaki rakamlar altının içerdiği saf metalin piyasa karşılığıdır, yani has değeridir. Kuyumcu satış fiyatına işçilik, darphane maliyeti ve satıcı kâr marjı eklenir; alış fiyatı ise bunların altında kalır. Aradaki farka makas denir ve sarrafiye ürünlerde genellikle yüzde 2 ile 8 arasında değişir."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "22 ayar ve 18 ayar altın ne kadar saf altın içerir?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ayar, altının binde kaçının saf altın olduğunu gösterir. 24 ayar saf altındır. 22 ayar binde 916, 18 ayar binde 750, 14 ayar ise binde 585 saf altın içerir. Bir gram 18 ayar bilezik, gram altın fiyatının yüzde 75'i kadar has değere sahiptir."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
+    <nav class="topnav">
+      <a href="index.html"><b>F1</b><span data-i18n="nav.home">ANA SAYFA</span></a>
+      <a href="risk.html"><b>F2</b><span data-i18n="nav.risk">RİSK MOTORU</span></a>
+      <a href="compare.html"><b>F3</b><span data-i18n="nav.comp">KARŞILAŞTIR</span></a>
+      <a href="screener.html"><b>F4</b><span data-i18n="nav.screen">TARAYICI</span></a>
+      <a href="heatmap.html"><b>F5</b><span data-i18n="nav.heat">ISI HARİTASI</span></a>
+      <a href="kur.html" class="active"><b>F6</b><span data-i18n="nav.fx">KUR &amp; ALTIN</span></a>
+      <a href="https://derinlik.finansla.net" target="_blank" rel="noopener noreferrer" class="nav-ext"><b>F7</b><span data-i18n="nav.depth">KRİPTO DERİNLİK</span><span class="ext-arrow">↗</span></a>
+    </nav>
+    <div class="topsearch">
+      <input id="top-search" data-i18n-ph="search.ph" placeholder="ARA…" autocomplete="off" spellcheck="false">
+      <button class="btn" id="lang-toggle">EN</button>
+      <div class="clock" id="clock"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="identity" style="padding-bottom:8px">
+      <div>
+        <h1 class="code" style="font-size:26px" data-i18n="fx.title">KUR &amp; ALTIN</h1>
+        <div class="fullname" data-i18n="fx.subtitle">Canlı döviz kurları ile gram, çeyrek, yarım ve tam altın fiyatları — Türk piyasası veya küresel spot ons üzerinden</div>
+      </div>
+      <div class="pricebox" style="margin-left:auto">
+        <div class="fx-src" id="fx-src">
+          <button class="btn" data-src="spot" data-i18n="fx.srcSpot">KÜRESEL SPOT</button>
+          <button class="btn active" data-src="tr" data-i18n="fx.srcTr">TÜRK PİYASASI</button>
+        </div>
+        <div class="fx-src-note" id="src-note"></div>
+        <div class="asof small faint" id="asof"></div>
+      </div>
+    </div>
+
+    <!-- ---- döviz kurları ---- -->
+    <section class="panel" style="margin-bottom:14px">
+      <div class="panel-head">
+        <span data-i18n="fx.rates">DÖVİZ KURLARI</span>
+        <span class="right small faint" data-i18n="fx.perunit">1 BİRİM = ? TL</span>
+      </div>
+      <div class="panel-body">
+        <div class="tiles" id="fx-tiles">
+          <div class="loading" data-i18n="searching">YÜKLENİYOR</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---- altın ---- -->
+    <section class="panel" style="margin-bottom:14px">
+      <div class="panel-head">
+        <!-- Varsayılan kaynak TÜRK PİYASASI olduğu için buradaki başlangıç
+             metni de öyle. Kullanıcı Küresel Spot'a geçerse kur.js değiştirir. -->
+        <span id="gold-title" data-i18n="fx.goldTr">ALTIN — TÜRK PİYASASI FİYATLARI</span>
+        <span class="right small faint" id="gold-basis"></span>
+      </div>
+      <div class="panel-body">
+        <div class="tiles" id="gold-tiles">
+          <div class="loading" data-i18n="searching">YÜKLENİYOR</div>
+        </div>
+        <!-- Başlık ve bu not KAYNAĞA GÖRE değişir (kur.js → renderGold).
+             Türk piyasası modunda değerler has değil, prim dahil piyasa
+             fiyatıdır; aynı metni bırakmak kullanıcıyı yanıltırdı. -->
+        <p class="small faint" style="margin:14px 2px 0" id="gold-note" data-i18n="fx.goldnoteTr">
+          Bu değerler <b>Türk serbest piyasası kotasyonlarıdır</b>; sarrafiye primi ve
+          alış-satış makası dahildir, kuyumcu fiyatına daha yakındır. Saf altının
+          karşılığını (has değer) görmek için <b>Küresel Spot</b>'a geçin.
+        </p>
+      </div>
+    </section>
+
+    <!-- ---- çevirici + altın hesaplayıcı ---- -->
+    <div class="fx-two">
+      <section class="panel">
+        <div class="panel-head"><span data-i18n="fx.conv">DÖVİZ ÇEVİRİCİ</span></div>
+        <div class="panel-body">
+          <div class="fx-conv">
+            <input id="conv-amt" class="fx-in" type="number" inputmode="decimal" value="100" min="0" step="any" aria-label="Miktar">
+            <select id="conv-from" class="fx-sel" aria-label="Kaynak birim"></select>
+            <button class="btn fx-swap" id="conv-swap" title="Değiştir" aria-label="Birimleri değiştir">⇄</button>
+            <select id="conv-to" class="fx-sel" aria-label="Hedef birim"></select>
+          </div>
+          <div class="fx-out" id="conv-out">—</div>
+          <div class="small faint" id="conv-rate"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><span data-i18n="fx.calc">ALTIN HESAPLAYICI</span></div>
+        <div class="panel-body">
+          <div class="fx-conv">
+            <input id="au-amt" class="fx-in" type="number" inputmode="decimal" value="1" min="0" step="any" aria-label="Adet veya gram">
+            <select id="au-kind" class="fx-sel" aria-label="Altın türü"></select>
+          </div>
+          <div class="fx-out" id="au-out">—</div>
+          <div class="small faint" id="au-detail"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ---- grafik ---- -->
+    <section class="panel" style="margin-top:14px">
+      <div class="panel-head">
+        <span data-i18n="fx.chart">1 YILLIK SEYİR</span>
+        <span class="right" id="chart-tabs">
+          <button class="btn active" data-series="USDTRY=X">USD/TRY</button>
+          <button class="btn" data-series="EURTRY=X">EUR/TRY</button>
+          <button class="btn" data-series="GRAM">GRAM ALTIN</button>
+          <button class="btn" data-series="GC=F">ONS ALTIN</button>
+        </span>
+      </div>
+      <div class="panel-body">
+        <div style="height:300px;position:relative"><canvas id="fx-chart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ---- statik açıklama: SEO içeriği, JS'siz de okunur ---- -->
+    <section class="panel fx-article" style="margin-top:14px">
+      <div class="panel-head"><span data-i18n="fx.how">NASIL HESAPLANIYOR?</span></div>
+      <div class="panel-body">
+        <h2>Gram altın nasıl hesaplanır?</h2>
+        <p>
+          Altın dünya piyasalarında <b>ons</b> birimiyle ve dolar üzerinden işlem görür.
+          Bir ons 31,1035 grama karşılık gelir. Türk lirası cinsinden gram altının
+          karşılığını bulmak için ons fiyatı dolar kuruyla çarpılır ve bir onstaki
+          gram sayısına bölünür:
+        </p>
+        <pre class="fx-formula">Gram Altın (TL) = Ons Altın (USD) × USD/TRY ÷ 31,1035</pre>
+        <p>
+          Bu sayfadaki tüm altın değerleri bu formülden türetilir. Ons fiyatı ve dolar
+          kuru canlı olarak çekilir, gram karşılığı tarayıcınızda hesaplanır.
+        </p>
+
+        <h2>Çeyrek, yarım ve tam altın ne kadar saf altın içerir?</h2>
+        <p>
+          Sarrafiye altınlar 22 ayardır; yani ağırlıklarının binde 916'sı saf altındır,
+          kalanı dayanıklılık için eklenen alaşımdır. Bir ürünün <b>has değeri</b>,
+          içerdiği saf altın miktarının gram altın fiyatıyla çarpımıdır:
+        </p>
+        <table class="data fx-spec">
+          <thead>
+            <tr>
+              <th>Ürün</th><th>Brüt ağırlık</th><th>Ayar</th><th>Saf altın</th>
+            </tr>
+          </thead>
+          <tbody id="spec-body"></tbody>
+        </table>
+
+        <h2>Ayar ne anlama geliyor?</h2>
+        <p>
+          Ayar, altının saflık derecesidir. 24 ayar saf altını ifade eder; daha düşük
+          ayarlar alaşım oranı arttıkça saf altın içeriğini azaltır. Örneğin bir gram
+          18 ayar bilezik, gram altın fiyatının yalnızca %75'i kadar has değere sahiptir.
+        </p>
+        <ul class="fx-ul">
+          <li><b>24 ayar</b> — binde 1000 · saf altın, gram altının kendisi</li>
+          <li><b>22 ayar</b> — binde 916 · çeyrek, yarım, tam ve Cumhuriyet altını</li>
+          <li><b>18 ayar</b> — binde 750 · takı ve bilezikte yaygın</li>
+          <li><b>14 ayar</b> — binde 585 · daha ekonomik takılar</li>
+        </ul>
+
+        <h2>Hesaplanan değer neden kuyumcudaki fiyattan farklı?</h2>
+        <p>
+          Burada gördüğünüz rakamlar <b>has değerdir</b> — ürünün içerdiği saf metalin
+          piyasa karşılığı. Kuyumcunun satış fiyatına işçilik, darphane maliyeti ve
+          satıcı kâr marjı eklenir; alış fiyatı ise bu değerin altında kalır. Alış ile
+          satış arasındaki bu farka <b>makas</b> denir ve sarrafiye ürünlerde genellikle
+          %2 ile %8 arasında değişir. Küçük birimlerde (çeyrek gibi) makas oransal
+          olarak daha geniştir, çünkü işçilik maliyeti daha az altına dağılır.
+        </p>
+        <p>
+          Bu yüzden bu sayfa bir <b>fiyat listesi değil, bir referans noktasıdır</b>:
+          kuyumcunun size sunduğu fiyatın metal değerinin ne kadar üzerinde olduğunu
+          görmenizi sağlar.
+        </p>
+
+        <h2>Altın ve döviz portföyünüzün riskini ölçün</h2>
+        <p>
+          Altın çoğu zaman "güvenli liman" sayılır, ama fiyatı da dalgalanır ve bu
+          dalgalanma ölçülebilir. Terminalin <a href="risk.html">Risk Motoru</a>,
+          portföyünüzün oynaklığını, riske maruz değerini (VaR) ve varlıklar arası
+          korelasyonu hesaplar — altın ile hisse senetlerinizin gerçekten birlikte mi
+          yoksa ters mi hareket ettiğini görmenizi sağlar.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span class="live" data-i18n="status.live">● CANLI</span>
+    <span data-i18n="status.data">VERİ: YAHOO FINANCE · TEFAS · GOOGLE NEWS</span>
+    <span class="right" data-i18n="status.edu">YALNIZCA EĞİTİM AMAÇLIDIR — YATIRIM TAVSİYESİ DEĞİLDİR</span>
+  </footer>
+
+  <div class="disclaimer" data-i18n="legal.text"></div>
+
+  <script src="js/config.js?v=35"></script>
+  <script src="js/i18n.js?v=35"></script>
+  <script src="js/api.js?v=35"></script>
+  <script src="js/ui.js?v=35"></script>
+  <script src="js/kur.js?v=35"></script>
+  <script src="js/whatsnew.js?v=35"></script>
+  <script src="js/site.js?v=35"></script>
+  <script src="js/track.js?v=35"></script>
+</body>
+</html>

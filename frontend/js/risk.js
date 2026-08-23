@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // Risk Engine page: build a mixed stock/fund portfolio, POST it to /api/portfolio,
 // render VaR tiles, histograms with VaR markers, correlation heatmap, asset table.
 (function () {
@@ -52,6 +55,41 @@
     equalize();
   }
 
+  // ---- hazır varlıklar -------------------------------------------------
+
+  // Aramada bulunamayan ya da yanlış sonuç veren varlıklar. Hepsi portföy
+  // motorunda ÇALIŞIYOR (Yahoo geçmişi var), sadece /api/search bunları
+  // döndürmüyor. "gold" araması Gold.com Inc. şirketini getiriyordu.
+  //
+  // UYARI: GC=F ve BZ=F dolar, XU100.IS lira cinsinden. Motor getirileri
+  // birimsiz hesapladığı için karışık portföy çalışır ama kur etkisi
+  // dışarıda kalır — sayfadaki motor notlarında bu zaten belirtiliyor.
+  const QUICK = [
+    { id: 'GC=F',      type: 'stock', key: 'q.gold'   },
+    { id: 'SI=F',      type: 'stock', key: 'q.silver' },
+    { id: 'USDTRY=X',  type: 'stock', key: 'q.usd'    },
+    { id: 'EURTRY=X',  type: 'stock', key: 'q.eur'    },
+    { id: 'XU100.IS',  type: 'stock', key: 'q.bist'   },
+    { id: 'BZ=F',      type: 'stock', key: 'q.brent'  },
+    { id: '^GSPC',     type: 'stock', key: 'q.sp500'  },
+    { id: 'BTC-USD',   type: 'stock', key: 'q.btc'    },
+  ];
+
+  const quickBox = document.getElementById('quick-assets');
+  function renderQuick() {
+    quickBox.innerHTML = QUICK.map((q) => {
+      const on = assets.some((a) => a.id === q.id);
+      return `<button class="btn qa${on ? ' on' : ''}" data-qa="${q.id}"${on ? ' disabled' : ''}>${
+        on ? '✓ ' : '+ '}${UI.esc(t(q.key))}</button>`;
+    }).join('');
+  }
+  quickBox.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-qa]');
+    if (!btn) return;
+    const q = QUICK.find((x) => x.id === btn.dataset.qa);
+    if (q) addAsset({ type: q.type, id: q.id, name: t(q.key) });
+  });
+
   function removeAsset(i) {
     assets.splice(i, 1);
     renderAssets();
@@ -90,10 +128,83 @@
       ? `${t('risk.total')}: <span class="${Math.abs(total - 100) < 0.5 ? 'up' : 'amber'}">${total.toFixed(1)}%</span> ${t('risk.normnote')}`
       : '';
     runBtn.disabled = assets.length < 1;
+    document.getElementById('pf-share').disabled = assets.length < 1;
+    document.getElementById('pf-clear').disabled = assets.length < 1;
+    renderQuick();
   }
+
+  // ---- portföyü paylaş -------------------------------------------------
+
+  // Portföy YALNIZCA bağlantıda yaşar; tarayıcıya kaydedilmez.
+  // Bu bilinçli bir tercih: risk sayfası her açılışta temiz başlar. Portföyü
+  // saklamak isteyen bağlantıyı kopyalayıp kendine gönderir — böylece hangi
+  // portföyün saklandığına kullanıcı karar verir, sayfa kendi kafasına göre
+  // eski bir listeyi geri getirmez.
+  //
+  // Sunucuya da hiçbir şey yazılmıyor: saklanan kişisel veri yok.
+
+  /** Portföyü bağlantıya kodlar:  ?p=s~GC%3DF~25,f~NNF~75
+   *  Biçim: tür(s|f) ~ sembol ~ ağırlık, virgülle ayrılmış. */
+  function encodePortfolio() {
+    return assets
+      .map((a) => `${a.type === 'fund' ? 'f' : 's'}~${a.id}~${a.weight}`)
+      .join(',');
+  }
+
+  function decodePortfolio(raw) {
+    return String(raw || '').split(',').map((chunk) => {
+      const [tc, id, w] = chunk.split('~');
+      if (!id) return null;
+      const weight = Number(w);
+      return {
+        type: tc === 'f' ? 'fund' : 'stock',
+        id,
+        name: id,                       // gerçek ad yalnızca aramada gelir
+        weight: isFinite(weight) && weight >= 0 ? weight : 0,
+      };
+    }).filter(Boolean).slice(0, 10);
+  }
+
+  /** Sayfa yalnızca ?p= bağlantısıyla açıldığında portföyü geri kurar.
+   *  Bağlantı yoksa boş başlar — istenen davranış bu. */
+  function restore() {
+    const shared = UI.qs('p');
+    if (!shared) return;
+    decodePortfolio(shared).forEach((a) => {
+      if (!assets.some((x) => x.id === a.id)) assets.push(a);
+    });
+    if (assets.length) renderAssets();
+  }
+
+  const msg = document.getElementById('pf-msg');
+  function flash(text) {
+    msg.textContent = text;
+    setTimeout(() => { msg.textContent = ''; }, 2500);
+  }
+
+  document.getElementById('pf-share').addEventListener('click', async () => {
+    const url = `${location.origin}${location.pathname}?p=${encodeURIComponent(encodePortfolio())}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      flash(t('risk.copied'));
+    } catch {
+      // Pano izni yoksa (http veya eski tarayıcı) bağlantıyı adres çubuğuna
+      // yazalım ki kullanıcı elle kopyalayabilsin.
+      history.replaceState(null, '', url);
+      flash(t('risk.copyfail'));
+    }
+  });
+
+  document.getElementById('pf-clear').addEventListener('click', () => {
+    assets.length = 0;
+    // Adresteki ?p= de temizlensin, yoksa sayfa yenilenince portföy geri gelir.
+    history.replaceState(null, '', location.pathname);
+    renderAssets();
+  });
 
   document.getElementById('equalize').addEventListener('click', equalize);
   renderAssets();
+  restore();
 
   // ---- charts ----------------------------------------------------------
 

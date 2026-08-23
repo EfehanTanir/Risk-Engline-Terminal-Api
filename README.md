@@ -103,3 +103,11 @@ app (RFC 6238, stdlib only), exchanged for a short-lived signed session token.
 - **News sentiment** is a TR+EN keyword lexicon heuristic — an indicator, not
   NLP-grade classification.
 - Educational use only — not investment advice.
+
+## License
+
+Copyright © 2026 **Efehan Tanırgan**. All rights reserved.
+
+This is proprietary software — see [LICENSE](LICENSE). The repository is public
+so the work can be reviewed; that does not grant permission to copy, modify,
+redistribute or reuse any part of it. For permission: efehantanirgan7@gmail.com

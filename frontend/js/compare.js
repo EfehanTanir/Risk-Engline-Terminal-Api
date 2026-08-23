@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // F3 Compare: race up to 4 stocks/funds on an indexed-to-100 chart with
 // side-by-side risk metrics and a correlation matrix. Pure frontend — reuses
 // the existing /api/stock and /api/fund endpoints.

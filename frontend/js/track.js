@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // Visitor beacon. Loaded on every page; reports one event per page view to
 // /api/track so the admin panel can show traffic.
 //
@@ -17,6 +20,7 @@
     'index.html': 'home', '': 'home', '/': 'home',
     'stock.html': 'stock', 'fund.html': 'fund', 'risk.html': 'risk',
     'compare.html': 'compare', 'screener.html': 'screener', 'heatmap.html': 'heatmap',
+    'kur.html': 'fx',
   };
 
   const file = location.pathname.split('/').pop() || 'index.html';

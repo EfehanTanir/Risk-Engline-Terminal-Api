@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // Site geneli kontrol: yönetim panelinden yazılan duyuru bandı ve bakım modu.
 //
 // Her sayfada çalışır, /api/site-config ucunu okur ve sonucu uygular. API

@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+  <!-- Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+       SPDX-License-Identifier: LicenseRef-Finansla-Proprietary -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>FINANSLA TERMINAL — YÖNETİM</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/terminal.css?v=23">
+  <link rel="stylesheet" href="css/terminal.css?v=35">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23070b10'/><rect x='3' y='3' width='4' height='10' fill='%2338bdf8'/></svg>">
 </head>
 <body>
@@ -15,6 +17,9 @@
     <a class="brand" href="index.html">FINANSLA<span>TERMINAL</span></a>
     <span class="tag admin-tag">YÖNETİM</span>
     <div class="topsearch">
+      <!-- Güvenlik rozeti: giriş hız sınırı Upstash'e bağlı, düşerse kaba
+           kuvvet koruması sessizce kapanıyor — üst barda görünsün. -->
+      <span class="sec-badge" id="sec-badge" hidden></span>
       <span class="admin-refresh-note small faint" id="last-refresh"></span>
       <button class="btn" id="auto-toggle">OTO 10sn</button>
       <button class="btn" id="refresh-btn">YENİLE</button>
@@ -194,6 +199,60 @@
           <div class="panel-body tight"><div id="top-referrers"></div></div>
         </section>
 
+        <!-- paylaşım kartı üreticisi -->
+        <section class="col-7 panel">
+          <div class="panel-head"><span>PAYLAŞIM KARTI</span>
+            <span class="right small faint">LINKEDIN İÇİN HAZIR GÖRSEL</span></div>
+          <div class="panel-body">
+            <div class="tool-row">
+              <select id="card-kind" class="sc-input" style="width:135px">
+                <option value="stock">Hisse</option>
+                <option value="fund">TEFAS Fonu</option>
+              </select>
+              <div class="tool-search">
+                <input type="text" id="card-symbol" class="sc-input" autocomplete="off"
+                       spellcheck="false" placeholder="Ara: Türk Hava Yolları · THYAO · Tera Portföy · NNF">
+                <div class="tool-drop" id="card-drop" hidden></div>
+              </div>
+              <button class="btn primary" id="card-load">GETİR</button>
+            </div>
+            <div class="tool-row" style="margin-top:8px">
+              <select id="card-size" class="sc-input" style="width:auto">
+                <option value="wide">Yatay 1200×630 — LinkedIn / X</option>
+                <option value="square">Kare 1080×1080 — Instagram</option>
+              </select>
+              <button class="btn" id="card-download" disabled>PNG İNDİR</button>
+              <span class="small" id="card-status"></span>
+            </div>
+            <div class="card-preview">
+              <canvas id="card-canvas" width="1200" height="630"></canvas>
+            </div>
+            <div class="small faint" style="margin-top:8px">
+              Görsel tarayıcınızda çizilir — dışarıya istek gitmez, ücretsizdir.
+            </div>
+          </div>
+        </section>
+
+        <!-- sembol test aracı -->
+        <section class="col-5 panel">
+          <div class="panel-head"><span>SEMBOL TESTİ</span>
+            <span class="right small" id="test-summary"></span></div>
+          <div class="panel-body">
+            <p class="small faint" style="margin-bottom:8px">
+              Sembolleri yapıştırın (virgül, boşluk veya alt alta). Hangileri
+              API'de çözülüyor görün — ısı haritası listesini güncellerken işe yarar.
+            </p>
+            <textarea id="test-input" class="sc-input" rows="4"
+                      placeholder="THYAO.IS, ASELS.IS, KCHOL.IS&#10;AAPL NVDA"></textarea>
+            <div class="tool-row" style="margin-top:8px">
+              <button class="btn primary" id="test-run">TEST ET</button>
+              <button class="btn" id="test-copy-ok" disabled>ÇALIŞANLARI KOPYALA</button>
+              <button class="btn" id="test-copy-bad" disabled>HATALILARI KOPYALA</button>
+            </div>
+            <div class="tool-results" id="test-results"></div>
+          </div>
+        </section>
+
         <!-- bakım -->
         <section class="col-12 panel">
           <div class="panel-head"><span>BAKIM</span></div>
@@ -222,8 +281,9 @@
     <span class="right" id="api-target"></span>
   </footer>
 
-  <script src="js/config.js?v=23"></script>
-  <script src="js/ui.js?v=23"></script>
-  <script src="js/admin.js?v=23"></script>
+  <script src="js/config.js?v=35"></script>
+  <script src="js/ui.js?v=35"></script>
+  <script src="js/admin.js?v=35"></script>
+  <script src="js/tools.js?v=35"></script>
 </body>
 </html>

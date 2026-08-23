@@ -1,3 +1,6 @@
+/* Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+   SPDX-License-Identifier: LicenseRef-Finansla-Proprietary */
+
 /* ============================================================
    FINANSLA TERMINAL — modern Bloomberg-style terminal theme
    ============================================================ */
@@ -62,11 +65,26 @@ body::before {
 .brand::before { content: "▮ "; animation: blink 1.2s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
-.topnav { display: flex; gap: 8px; }
+/* ============================================================
+   DİKKAT — ÜST BARA SEKME EKLEYECEKSEN ÖNCE BURAYI OKU
+   Üst bar TEK SATIR olmak zorundur. Buton içindeki yazı alt satıra
+   inerse bar iki katına çıkar ve terminal görüntüsü tamamen bozulur
+   (F6 Kur & Altın eklenirken tam olarak bu oldu).
+   Üç katmanlı koruma var, üçünü de bozma:
+     1) white-space: nowrap → yazı buton içinde asla kırılmaz
+     2) flex: none + overflow-x → sığmazsa bar yatay kayar, satır atlamaz
+     3) aşağıdaki daralma breakpoint'leri → dar ekranda sırayla
+        boşluk, saat ve F-etiketleri feda edilir
+   Sekme ekledikten sonra 1920 / 1600 / 1366 / 1280 genişliklerinde
+   BAKMADAN commit etme.
+   ============================================================ */
+.topnav { display: flex; gap: 7px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.topnav::-webkit-scrollbar { display: none; }
 .topnav a {
-  padding: 7px 16px; color: var(--ink); font-size: 12.5px; font-weight: 700;
-  letter-spacing: 1.5px; border: 1px solid var(--border-hi);
+  padding: 7px 12px; color: var(--ink); font-size: 12.5px; font-weight: 700;
+  letter-spacing: 1.1px; border: 1px solid var(--border-hi);
   background: var(--panel-2);
+  white-space: nowrap; flex: none;
 }
 .topnav a:hover { border-color: var(--amber); color: var(--amber); }
 .topnav a.active {
@@ -75,7 +93,7 @@ body::before {
 }
 .topnav a b { color: var(--amber); font-weight: 700; margin-right: 6px; }
 .topnav a.active b { color: rgba(0, 0, 0, 0.6); }
-/* F6 external — Crypto Depth: cyan accent + soft pulsing glow, opens a new tab */
+/* F7 external — Crypto Depth: cyan accent + soft pulsing glow, opens a new tab */
 .topnav a.nav-ext {
   color: var(--cyan);
   border-color: rgba(56, 189, 248, 0.55);
@@ -94,10 +112,14 @@ body::before {
   50% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.45); }
 }
 
-.topsearch { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+/* Sağ grup ASLA daralmamalı: daralınca "v2.5 ●" rozeti iki satıra bölünüp
+   üst barı büyütüyordu. Arama kutusu 220 → 150; 7 sekmeye yer açan asıl
+   hamle bu (bkz. .topnav üstündeki uyarı). */
+.topsearch { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; }
+.topsearch > * { flex: none; white-space: nowrap; }
 .topsearch input {
   background: var(--bg); border: 1px solid var(--border); color: var(--ink);
-  font-family: var(--mono); font-size: 12px; padding: 5px 10px; width: 220px; outline: none;
+  font-family: var(--mono); font-size: 12px; padding: 5px 10px; width: 150px; outline: none;
 }
 .topsearch input:focus { border-color: var(--amber-dim); }
 .clock { color: var(--muted); font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
@@ -118,6 +140,21 @@ body::before {
 .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; }
 .col-7 { grid-column: span 7; } .col-8 { grid-column: span 8; }
 .col-12 { grid-column: span 12; }
+/* 7 sekmeyle üst bar geniş ekranda bile sınırda. Kademeli olarak yer aç:
+   önce boşluklar, sonra saat, en son F1/F2… etiketleri. */
+@media (max-width: 1600px) {
+  .topbar { gap: 12px; }
+  .topnav { gap: 5px; }
+  .topnav a { padding: 7px 9px; letter-spacing: 0.6px; }
+  .topsearch input { width: 160px; }
+}
+@media (max-width: 1320px) {
+  .clock { display: none; }
+}
+@media (max-width: 1120px) {
+  .topnav a b { display: none; }
+}
+
 @media (max-width: 980px) {
   .col-3, .col-4, .col-5, .col-6, .col-7, .col-8 { grid-column: span 12; }
   .topsearch input { width: 130px; }
@@ -325,7 +362,7 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
 }
 
 /* ---------- update notification ---------- */
-.ver-btn { position: relative; }
+.ver-btn { position: relative; white-space: nowrap; }
 .ver-dot {
   display: inline-block; width: 8px; height: 8px; border-radius: 50%;
   background: var(--amber); margin-left: 4px; vertical-align: middle;
@@ -688,3 +725,189 @@ table.corr th { color: var(--muted); font-weight: 400; background: var(--panel);
   background: rgba(255, 176, 0, 0.12); color: var(--amber); border-color: var(--amber);
 }
 .kill-btn:disabled { border-color: var(--border); color: var(--faint); }
+/* ---- yonetim araclari: paylasim karti + sembol testi ---- */
+.tool-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.tool-row .btn { padding: 6px 12px; }
+
+textarea.sc-input { resize: vertical; line-height: 1.5; min-height: 70px; }
+
+.card-preview {
+  margin-top: 12px; border: 1px solid var(--border); background: var(--bg);
+  padding: 10px; overflow-x: auto;
+}
+.card-preview canvas {
+  display: block; width: 100%; height: auto; max-width: 100%;
+  background: var(--bg);
+}
+
+.tool-results { margin-top: 12px; max-height: 300px; overflow-y: auto; }
+.tt-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 5px 8px; border-bottom: 1px solid var(--border); font-size: 11.5px;
+}
+.tt-row:last-child { border-bottom: none; }
+.tt-row.bad { background: rgba(255, 82, 82, 0.06); }
+.tt-row .s { color: var(--amber); min-width: 82px; font-weight: 700; }
+.tt-row.bad .s { color: var(--down); }
+.tt-row .n {
+  flex: 1; color: var(--muted); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.tt-row .p { color: var(--ink); white-space: nowrap; }
+.tt-row .st { min-width: 62px; text-align: right; white-space: nowrap; }
+.tt-row.bad .st { color: var(--down); font-size: 10px; letter-spacing: 1px; }
+/* arac icindeki arama + otomatik tamamlama listesi */
+.tool-search { position: relative; flex: 1; min-width: 210px; }
+.tool-search .sc-input { width: 100%; }
+.tool-drop {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 300;
+  background: var(--panel-2); border: 1px solid var(--border-hi);
+  border-top: none; max-height: 268px; overflow-y: auto;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+}
+.tool-drop-row {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 7px 10px; border-bottom: 1px solid var(--border);
+  font-size: 11.5px; cursor: pointer;
+}
+.tool-drop-row:last-child { border-bottom: none; }
+.tool-drop-row:hover { background: var(--panel); }
+.tool-drop-row .c { color: var(--amber); font-weight: 700; min-width: 74px; }
+.tool-drop-row .n {
+  flex: 1; color: var(--ink); min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tool-drop-row .m { color: var(--faint); font-size: 10px; white-space: nowrap; }
+.tool-drop-empty { padding: 12px; color: var(--faint); font-size: 11px; text-align: center; }
+
+/* ---------- yonetim: guvenlik rozeti ---------- */
+/* Giris hiz siniri Upstash'e bagli. Dusunce kaba kuvvet korumasi SESSIZCE
+   kapaniyor; bu yuzden Sistem sekmesine girmeden de gorunsun diye ust barda. */
+.sec-badge {
+  font-size: 10px; letter-spacing: 1px; padding: 3px 8px;
+  border: 1px solid; white-space: nowrap; cursor: default; flex: none;
+}
+.sec-badge.ok {
+  color: var(--up); border-color: rgba(47, 208, 126, 0.45);
+  background: rgba(47, 208, 126, 0.08);
+}
+.sec-badge.bad {
+  color: var(--down); border-color: var(--down);
+  background: rgba(255, 82, 82, 0.12); font-weight: 700;
+  animation: blink 1.6s steps(1) infinite;
+}
+
+/* ---------- izleme listesi ---------- */
+.code-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.wl-star {
+  background: none; border: none; cursor: pointer; padding: 0 2px;
+  font-size: 25px; line-height: 1; color: var(--faint);
+  transition: color .12s, transform .12s;
+}
+.wl-star:hover { color: var(--amber); transform: scale(1.14); }
+.wl-star.on { color: var(--amber); text-shadow: 0 0 12px rgba(255, 176, 0, 0.5); }
+
+.wl-tile { position: relative; padding: 0; }
+.wl-link { display: block; padding: 12px; }
+.wl-link:hover { background: var(--panel-2); }
+.wl-tile .v { font-size: 19px; white-space: nowrap; }
+.wl-tile .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wl-x {
+  position: absolute; top: 4px; right: 4px; z-index: 2;
+  background: none; border: none; cursor: pointer;
+  color: var(--faint); font-size: 12px; padding: 3px 5px; line-height: 1;
+}
+.wl-x:hover { color: var(--down); }
+
+/* ---------- risk: hazir varliklar + portfoy eylemleri ---------- */
+.quick-assets { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.quick-assets .qa { font-size: 10.5px; padding: 4px 8px; letter-spacing: 0.5px; }
+.quick-assets .qa.on {
+  color: var(--up); border-color: rgba(47, 208, 126, 0.45);
+  opacity: .75; cursor: default;
+}
+.pf-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.pf-actions .btn { font-size: 10.5px; padding: 5px 9px; }
+.pf-actions .btn:disabled { opacity: .4; cursor: default; }
+
+/* ---------- 404 ---------- */
+.e404 { max-width: 620px; margin: 0 auto; padding: 72px 4px 90px; text-align: center; }
+.e404-code {
+  font-size: 88px; font-weight: 700; color: var(--amber); line-height: 1;
+  letter-spacing: 6px; text-shadow: 0 0 26px rgba(255, 176, 0, 0.28);
+}
+.e404-title { font-size: 17px; letter-spacing: 4px; color: var(--ink); margin: 14px 0 12px; font-weight: 700; }
+.e404-text { color: var(--muted); font-size: 12.5px; line-height: 1.9; }
+.e404-path {
+  margin: 16px 0 26px; padding: 9px 12px; display: inline-block; max-width: 100%;
+  background: var(--panel-2); border: 1px solid var(--border);
+  color: var(--down); font-size: 11.5px; word-break: break-all;
+}
+.e404-links { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.e404-links .btn { padding: 8px 14px; font-size: 11.5px; }
+.e404-hint { color: var(--faint); font-size: 11px; line-height: 1.9; margin-top: 30px; }
+
+@media (max-width: 560px) {
+  .e404 { padding: 44px 4px 60px; }
+  .e404-code { font-size: 62px; }
+}
+
+/* ---------- F6 kur & altin ---------- */
+
+/* Kartlar terminalin geri kalaniyla ayni dilde konusmali. Varsayilan .tile
+   22px ve minmax(150px): "10.913,86 ₺" siga bilmiyor, para birimi alt satira
+   dusuyordu. Sutunu genislet, punto'yu kis, kirilmayi kapat. */
+#fx-tiles, #gold-tiles { grid-template-columns: repeat(auto-fit, minmax(182px, 1fr)); }
+#fx-tiles .v, #gold-tiles .v { font-size: 18.5px; white-space: nowrap; letter-spacing: 0.3px; }
+#fx-tiles .s, #gold-tiles .s { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* kaynak secici — baslikta, guncelleme saatinin ustunde */
+.fx-src { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.fx-src .btn.active { color: #000; background: var(--amber); border-color: var(--amber); }
+.fx-src-note { color: var(--faint); font-size: 10px; letter-spacing: 1px; margin-top: 5px; text-align: right; }
+
+.fx-two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.fx-conv { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.fx-in, .fx-sel {
+  background: var(--panel-2); border: 1px solid var(--border-hi); color: var(--ink);
+  font-family: var(--mono); font-size: 13px; padding: 9px 10px; min-width: 0;
+}
+.fx-in { flex: 1 1 120px; font-variant-numeric: tabular-nums; }
+.fx-sel { flex: 1 1 118px; cursor: pointer; }
+.fx-in:focus, .fx-sel:focus { outline: none; border-color: var(--amber); }
+.fx-swap { flex: none; padding: 0 12px; font-size: 15px; line-height: 1; }
+.fx-out {
+  margin-top: 14px; font-size: 27px; color: var(--amber);
+  font-variant-numeric: tabular-nums; word-break: break-word;
+}
+.fx-out + .small { margin-top: 5px; }
+
+/* SEO metni: terminalin geri kalani teknik/kompakt, bu blok okunabilir olmali */
+.fx-article .panel-body { max-width: 860px; }
+.fx-article h2 {
+  font-size: 15px; color: var(--amber); margin: 26px 0 9px;
+  letter-spacing: 0.5px; font-weight: 700;
+}
+.fx-article h2:first-child { margin-top: 0; }
+.fx-article p { color: var(--muted); font-size: 12.5px; line-height: 1.85; margin-bottom: 11px; }
+.fx-article b { color: var(--ink); }
+.fx-article a { color: var(--cyan); }
+.fx-formula {
+  background: var(--panel-2); border-left: 2px solid var(--amber);
+  padding: 12px 14px; margin: 13px 0; color: var(--ink);
+  font-family: var(--mono); font-size: 12.5px;
+  overflow-x: auto; white-space: pre;
+}
+.fx-ul { list-style: none; margin: 6px 0 13px; }
+.fx-ul li {
+  color: var(--muted); font-size: 12.5px; line-height: 1.9;
+  padding-left: 15px; position: relative;
+}
+.fx-ul li::before { content: "▸"; position: absolute; left: 0; color: var(--amber); }
+.fx-ul li b { color: var(--ink); }
+.fx-spec { margin: 12px 0 4px; }
+
+@media (max-width: 860px) {
+  .fx-two { grid-template-columns: 1fr; }
+  .fx-out { font-size: 22px; }
+}

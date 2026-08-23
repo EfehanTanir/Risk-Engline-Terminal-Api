@@ -1,11 +1,32 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // Update notification: a version badge in the topbar (with an amber dot when
 // there's an unseen release) that opens a bilingual changelog panel. The badge,
 // panel and overlay are injected here so no page markup needs editing.
 // "Seen" version is tracked in localStorage; a new release auto-opens once.
 (function () {
-  const CURRENT = '2.4';
+  const CURRENT = '2.6';
 
   const CHANGELOG = [
+    {
+      v: '2.6', date: '2026-08-22',
+      tr: ['İzleme listesi — hisse ve fon sayfalarındaki ★ ile ekleyin, ana sayfada canlı fiyatlarıyla görün',
+           'Risk Motoru’na hazır varlıklar: altın, gümüş, USD/TRY, BIST 100, Brent ve Bitcoin tek tıkla',
+           'Portföyünüzü bağlantı olarak kopyalayıp paylaşabilir veya kendinize saklayabilirsiniz'],
+      en: ['Watchlist — add with ★ on stock and fund pages, see it with live prices on the home page',
+           'Quick assets in the Risk Engine: gold, silver, USD/TRY, BIST 100, Brent and Bitcoin in one click',
+           'Copy your portfolio as a link to share it or keep it for yourself'],
+    },
+    {
+      v: '2.5', date: '2026-08-19',
+      tr: ['F6 Kur & Altın — canlı döviz kurları ve gram · çeyrek · yarım · tam altın has değerleri',
+           'Döviz çevirici, altın hesaplayıcı ve ons/gram · USD/TRY için 1 yıllık seyir grafiği',
+           'Kripto Derinlik F6’dan F7’ye taşındı'],
+      en: ['F6 FX & Gold — live exchange rates and gram · quarter · half · full gold intrinsic values',
+           'Currency converter, gold calculator and 1-year history for ounce/gram and USD/TRY',
+           'Crypto Depth moved from F6 to F7'],
+    },
     {
       v: '2.4', date: '2026-08-03',
       tr: ['Üst menüye F6 Kripto Derinlik — canlı emir defteri derinliği (derinlik.finansla.net) eklendi',

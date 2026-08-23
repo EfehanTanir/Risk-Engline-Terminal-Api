@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // Home: instant search across Yahoo equities + TEFAS funds, ticker tape, market cards.
 (function () {
   const TAPE_SYMBOLS = ['XU100.IS', 'USDTRY=X', 'EURTRY=X', 'GC=F', 'BZ=F', '^GSPC', '^IXIC', 'BTC-USD'];

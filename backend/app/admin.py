@@ -1,6 +1,5 @@
-# Finansla Terminal - https://terminal.finansla.net
-# Copyright (c) 2026 Efehan Tanırgan. Tüm hakları saklıdır.
-# Bu dosya özel mülkiyettir; izinsiz kopyalanamaz, çoğaltılamaz veya dağıtılamaz.
+# Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+# SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
 
 """Admin panel API: servis sağlığı, ziyaretçi analitiği ve halka açık izleme
 sinyali (/api/track).

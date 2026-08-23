@@ -1,0 +1,9 @@
+# terminal.finansla.net — Finansla Terminal
+# Yönetim panosu asla taranmasın; geri kalan her şey serbest.
+
+User-agent: *
+Disallow: /admin
+Disallow: /admin.html
+Allow: /
+
+Sitemap: https://terminal.finansla.net/sitemap.xml

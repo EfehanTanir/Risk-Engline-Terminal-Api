@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // F5 Market Map: stocks grouped by sector, split around a center axis
 // (losers left, gainers right), colored by daily change. Market switch
 // (BIST / NASDAQ / Europe / Asia) + 60s auto-refresh. Over /api/heatmap.

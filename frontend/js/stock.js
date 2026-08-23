@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // Stock detail page: quote header, price chart, key stats, company profile with
 // read-more, risk metrics (chart + list), Black-Scholes greeks, sentiment news.
 (function () {
@@ -55,6 +58,11 @@
     // Identity: ticker code with the company's full name underneath
     document.getElementById('sym').textContent = profile.symbol;
     document.getElementById('fullname').textContent = profile.longName;
+    // İzleme listesi yıldızı — veri geldikten sonra bağlanır ki listeye
+    // sembolle birlikte şirketin adı da kaydedilebilsin.
+    if (typeof WL !== 'undefined') {
+      WL.initStar({ type: 'stock', id: profile.symbol, name: profile.longName });
+    }
     document.getElementById('tags').innerHTML = [
       profile.exchange, profile.sector, profile.industry, profile.isTurkish ? 'BIST' : null,
     ].filter(Boolean).map((x) => `<span class="tag">${UI.esc(x)}</span>`).join('');

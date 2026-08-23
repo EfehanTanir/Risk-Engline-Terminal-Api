@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // Admin panosu: servis sağlığı, canlı ziyaretçiler ve kullanım analitiği.
 //
 // Giriş: kullanıcı adı ve şifre yok. Authenticator uygulamasındaki 6 haneli
@@ -195,9 +198,11 @@
   }
 
   function renderHealth(h) {
-    const order = ['yahoo', 'tefas', 'news', 'storage'];
+    const order = ['yahoo', 'tefas', 'news', 'goldSpot', 'goldTr', 'storage'];
     const names = {
-      yahoo: 'YAHOO FINANCE', tefas: 'TEFAS', news: 'GOOGLE NEWS', storage: 'UPSTASH REDIS',
+      yahoo: 'YAHOO FINANCE', tefas: 'TEFAS', news: 'GOOGLE NEWS',
+      goldSpot: 'ALTIN SPOT · gold-api', goldTr: 'ALTIN TR · truncgil',
+      storage: 'UPSTASH REDIS',
     };
     $('health-list').innerHTML = order.map((key) => {
       const s = h.services[key] || {};
@@ -428,7 +433,25 @@
     loadSite();
   });
 
-  function refreshAll() { loadStats(); loadHealth(); }
+  /** Üst bardaki güvenlik rozeti. /admin/health değil /admin/ping kullanıyor:
+   *  health beş dış sonda çalıştırıyor, rozet için fazla pahalı. */
+  async function loadSecurity() {
+    const el = $('sec-badge');
+    try {
+      const p = await call('/admin/ping');
+      const on = !!p.loginRateLimited;
+      el.hidden = false;
+      el.className = 'sec-badge ' + (on ? 'ok' : 'bad');
+      el.textContent = on ? '● GİRİŞ HIZ SINIRI: AÇIK' : '▲ GİRİŞ HIZ SINIRI: KAPALI';
+      el.title = on
+        ? 'Upstash bağlı — IP başına 15 dakikada en fazla 10 hatalı kod denemesi.'
+        : 'Upstash erişilemiyor. Kaba kuvvet koruması DEVRE DIŞI; kod sınırsız denenebilir.';
+    } catch {
+      el.hidden = true;      // oturum düştüyse rozet de görünmesin
+    }
+  }
+
+  function refreshAll() { loadSecurity(); loadStats(); loadHealth(); }
 
   function startTimers() {
     stopTimers();

@@ -98,6 +98,7 @@ Yeni pip paketi yok: TOTP tamamen standart kütüphane, Upstash istemcisi düz
 .htaccess                   (yeni — /admin temiz adresi)
 admin.html                  (yeni)
 js/admin.js                 (yeni)
+js/tools.js                 (yeni — paylaşım kartı + sembol testi)
 js/track.js                 (yeni)
 js/site.js                  (yeni — duyuru bandı / bakım ekranı)
 js/home.js                  (değişti — tek satır, aramaları bildirir)
@@ -204,6 +205,24 @@ demektir.
 
 **Canlı akış** — son 60 olay: ne kadar önce, hangi sayfa, ne arandı/görüntülendi
 ve Vercel'in coğrafi başlıklarından şehir/ülke.
+
+## Araçlar
+
+**Paylaşım kartı** — bir hisse veya TEFAS fonu seçin, LinkedIn/X (1200×630) ya
+da Instagram (1080×1080) için markalı bir görsel üretilsin: kod, isim, fiyat,
+günlük değişim, 1 yıllık mini grafik, dört risk metriği ve altta site adresi ile
+yasal ibare. PNG olarak iner.
+
+Görsel `<canvas>` üzerine **tarayıcınızda çizilir**. Hiçbir yapay zeka servisi
+veya üçüncü taraf kullanılmaz, sunucuya yük binmez, maliyeti sıfırdır. Rakamlar
+doğrudan kendi API'nizden geldiği için de her zaman doğrudur — görsel üreten
+modellerin sayı ve yazıyı bozma sorunu burada yok.
+
+**Sembol testi** — sembolleri yapıştırın (virgül, boşluk veya alt alta),
+hangilerinin API'de çözüldüğünü görün. Çalışan ve hatalı listeleri tek tıkla
+kopyalanır. `MARKETS` sözlüğündeki ~150 sembollük ısı haritası evrenini
+güncellerken, hangi tickerın hâlâ geçerli olduğunu denemeden anlamak için.
+Tek seferde en fazla 200 sembol; 15'erli gruplar hâlinde sorgulanır.
 
 ## Gizlilik
 

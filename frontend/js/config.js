@@ -1,3 +1,6 @@
+// Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
+// SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
+
 // API base configuration.
 // The backend is a Python FastAPI service (see backend/). After deploying it
 // on Vercel, replace BACKEND_PROD below with your deployment URL + /api,
