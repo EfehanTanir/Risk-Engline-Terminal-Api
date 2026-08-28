@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from . import admin as admin_mod
+from . import backtest as backtest_mod
 from . import gold as gold_mod
 from . import news as news_mod
 from . import risk
@@ -445,14 +446,20 @@ class PortfolioRequest(BaseModel):
     horizonDays: int = 1
 
 
-def _asset_series(a: Asset) -> pd.Series:
+def _asset_series(a: Asset, fund_days: int = 380, stock_period: str = "1y") -> pd.Series:
+    """Tek varlığın kapanış serisi, tarih dizinli.
+
+    Varsayılanlar risk motorunun 1 yıllık penceresi içindir; geriye dönük test
+    çok daha uzun geçmiş ister (250 gün tahmin penceresi + 250 gün sınav), o
+    yüzden çağıran süreyi uzatabiliyor.
+    """
     if a.type == "fund":
-        df = tefas.fund_history(a.id, days=380)
+        df = tefas.fund_history(a.id, days=fund_days)
         if df is None or df.empty:
             return pd.Series(dtype=float)
         s = df.set_index(df["date"].map(lambda d: str(pd.Timestamp(d).date())))["price"].astype(float)
         return s
-    return yahoo.price_history(a.id, "1y")
+    return yahoo.price_history(a.id, stock_period)
 
 
 @app.post("/api/portfolio")
@@ -553,3 +560,79 @@ def api_portfolio(req: PortfolioRequest):
             "Sharpe/Sortino use a 40% TRY risk-free proxy; cross-currency portfolios ignore FX conversion (returns are unitless).",
         ],
     }
+
+
+# ---- VaR backtesting (model validation) ---------------------------------
+
+# Basel kurulumu 250 gün tahmin penceresi + 250 gün sınav = 500 işlem günü
+# ister. Yahoo'nun period sözlüğünde "3y" YOK, bir üst basamak "5y".
+# TEFAS takvim günüyle çalışır: 1000 takvim günü ≈ 690 işlem günü, yeter.
+BT_STOCK_PERIOD = "5y"
+BT_FUND_DAYS = 1000
+
+
+class BacktestRequest(BaseModel):
+    assets: list[Asset] = Field(min_length=1, max_length=MAX_ASSETS)
+    confidence: float = 0.99
+    estimationWindow: int = 250
+
+
+@app.post("/api/backtest")
+def api_backtest(req: BacktestRequest):
+    """Portföyün VaR modelini geçmiş veriyle sınar.
+
+    Risk motoru "kayıp şu seviyeyi %99 ihtimalle aşmaz" diyor; burası o iddiayı
+    gün gün test edip Kupiec, Christoffersen ve Basel trafik ışığı sonuçlarını
+    döndürüyor. Ayrıntılı yöntem: app/backtest.py başlığı.
+    """
+    confidence = 0.99 if req.confidence == 0.99 else 0.95
+    window = min(max(int(req.estimationWindow), 60), 500)
+
+    weights = np.array([max(a.weight, 0.0) for a in req.assets], dtype=float)
+    weights = weights / weights.sum() if weights.sum() > 0 else np.full(len(req.assets), 1 / len(req.assets))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(req.assets), 6)) as pool:
+        series = list(pool.map(
+            lambda a: _asset_series(a, BT_FUND_DAYS, BT_STOCK_PERIOD), req.assets))
+
+    for a, s in zip(req.assets, series):
+        if s.size < window + 40:
+            raise HTTPException(
+                400,
+                f"{a.id}: only {s.size} days of history — a {window}-day estimation "
+                "window plus a test period needs more. Try a shorter window.",
+            )
+
+    aligned = pd.concat({i: s for i, s in enumerate(series)}, axis=1, join="inner").dropna()
+    aligned = aligned.sort_index()
+    if len(aligned) < window + 31:
+        raise HTTPException(
+            400,
+            f"Only {len(aligned)} overlapping trading days across these assets — a "
+            f"{window}-day window leaves too few days to test. Use a shorter window "
+            "or drop the asset with the shortest history.",
+        )
+
+    prices = aligned.to_numpy()
+    port_returns = (prices[1:] / prices[:-1] - 1.0) @ weights
+    dates = [str(d) for d in aligned.index[1:]]
+
+    try:
+        result = backtest_mod.run(port_returns, dates, confidence, window)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+    result["inputs"] = {
+        "assets": [{"id": a.id, "type": a.type, "weight": float(weights[i])}
+                   for i, a in enumerate(req.assets)],
+        "confidence": confidence,
+        "estimationWindow": window,
+        "horizonDays": 1,
+    }
+    result["notes"] = [
+        "Each day's VaR is forecast from the preceding window only — no look-ahead.",
+        "Weights are held fixed across the test period (daily rebalancing assumption).",
+        "Basel traffic-light zones follow the binomial definition, so they stay valid "
+        "for test lengths other than 250 days.",
+    ]
+    return result
