@@ -1,12 +1,12 @@
 # Finansla Terminal · Copyright (c) 2026 Efehan Tanırgan
 # SPDX-License-Identifier: LicenseRef-Finansla-Proprietary
 
-"""VaR geriye dönük testi (backtesting) — model doğrulama katmanı.
+"""VaR ve Expected Shortfall geriye dönük testi — model doğrulama katmanı.
 
 Risk motoru bir VaR sayısı üretiyor; bu modül o sayının GERÇEKTEN tuttuğunu
 sınıyor. Yöntem, bankaların iç model onayı için uyguladığı standardın aynısı:
 
-1. Kayan pencere (rolling window) ile HER GÜN için bir VaR tahmini üretilir.
+1. Kayan pencere (rolling window) ile HER GÜN için bir tahmin üretilir.
    Tahmin yalnızca o güne kadarki veriyle yapılır — geleceğe bakış yoktur.
 2. Gerçekleşen getiri tahmini aşarsa "ihlal" (exception) sayılır.
 3. İhlal sayısı üç sınavdan geçirilir:
@@ -14,17 +14,26 @@ sınıyor. Yöntem, bankaların iç model onayı için uyguladığı standardın
       · Christoffersen — ihlaller KÜMELENİYOR mu?         (bağımsızlık)
       · Koşullu kapsama — ikisinin birleşimi
 4. Basel trafik ışığı: yeşil / sarı / kırmızı bölge ve sermaye çarpanı.
+5. Expected Shortfall %97,5 ayrıca Acerbi–Székely Z2 ile sınanır.
 
-Referans: BCBS, "Supervisory framework for the use of backtesting in
-conjunction with the internal models approach" (Ocak 1996) ve FRTB'nin
-sürdürdüğü aynı 250 gün / %99 çerçevesi.
+DÜZENLEME NOTU (sık yanlış bilinir): FRTB sermayeyi ES %97,5 ile ölçer ama
+geriye dönük testi HÂLÂ VaR üzerinden yapar. Sebebi teknik: ES "elicitable"
+değildir, yani doğrudan skorlanabilir bir istatistik değildir. Acerbi–Székely
+(2014) testleri bu boşluğu kapatmak için önerilmiştir, düzenleyici zorunluluk
+oldukları için değil. Bu yüzden burada ikisi birlikte raporlanır: VaR
+sınavları düzenleyici çerçeveyi, ES sınavı kuyruğun gerçek ağırlığını gösterir.
+
+Referans: BCBS "Supervisory framework for the use of backtesting..." (1996),
+BCBS d457 (FRTB, 2019), Acerbi & Székely "Back-testing Expected Shortfall"
+(Risk, 2014).
 
 Bilinçli tercihler:
   · Ağırlıklar test boyunca sabit tutulur (günlük yeniden dengeleme varsayımı).
-  · VaR pozitif kayıp oranı olarak raporlanır (0.023 = %2,3 kayıp) — projenin
-    geri kalanıyla aynı sözleşme.
+  · VaR/ES pozitif kayıp oranı olarak raporlanır (0.023 = %2,3 kayıp).
   · Trafik ışığı bölgeleri sabit tablodan değil, Basel'in TANIMINDAN
     (binom kuyruk olasılığı) hesaplanır; bkz. basel_zone().
+  · Z2'nin p-değeri sabit tohumlu Monte Carlo ile bulunur: aynı portföy aynı
+    sonucu versin, kullanıcı sayfayı yenileyince p-değeri oynamasın.
 """
 from __future__ import annotations
 
@@ -37,9 +46,18 @@ import numpy as np
 # RiskMetrics'in günlük veri için önerdiği sönüm katsayısı.
 EWMA_LAMBDA = 0.94
 
+# FRTB'nin sermaye ölçüsü olarak kullandığı ES düzeyi.
+ES_LEVEL = 0.975
+
+# Z2'nin dağılımı kapalı formda yok; simülasyonla bulunuyor.
+ES_SIMULATIONS = 2000
+ES_SEED = 20260828
+
 # Basel 1996 eki: 250 gün / %99 için ihlal sayısına bağlı sermaye ek çarpanı.
 # Yalnızca bu parametrelerde anlamlıdır, başka güven düzeyinde uygulanmaz.
 _BASEL_PLUS = {5: 0.40, 6: 0.50, 7: 0.65, 8: 0.75, 9: 0.85}
+
+_ND = NormalDist()
 
 
 # ---- yardımcı dağılım fonksiyonları --------------------------------------
@@ -74,6 +92,43 @@ def binom_cdf(k: int, n: int, p: float) -> float:
     if k >= n:
         return 1.0
     return float(min(1.0, sum(math.exp(_log_binom_pmf(i, n, p)) for i in range(k + 1))))
+
+
+def _cdf_table(n: int, p: float) -> list[float]:
+    """Tüm k için P(X <= k) — tek geçişte birikimli toplam.
+
+    Aralık ve eşik hesapları binom_cdf'i k kez çağırsa O(n²) olurdu;
+    tablo bir kez kurulup üç yerde birden kullanılıyor.
+    """
+    out, acc = [], 0.0
+    for k in range(n + 1):
+        acc += math.exp(_log_binom_pmf(k, n, p))
+        out.append(min(1.0, acc))
+    return out
+
+
+def binom_interval(cdf: list[float], mass: float = 0.95) -> tuple[int, int]:
+    """İhlal sayısının merkezi %95 kabul aralığı.
+
+    "6 ihlal neden sarı?" sorusunun görsel cevabı bu: beklenen 2,5 iken
+    0–6 arası normal, 7 ve üstü olağandışı. Kullanıcıya ham p-değerinden
+    çok daha anlaşılır geliyor.
+    """
+    tail = (1.0 - mass) / 2.0
+    lo = next((k for k, c in enumerate(cdf) if c >= tail), 0)
+    hi = next((k for k, c in enumerate(cdf) if c >= 1.0 - tail), len(cdf) - 1)
+    return lo, hi
+
+
+def basel_thresholds(cdf: list[float]) -> dict:
+    """Bölge sınırlarının ihlal sayısı cinsinden karşılığı.
+
+    Kullanıcı "kaç ihlalde sarıya düşerim" diye merak ediyor; bölgeyi
+    hesaplayan binom tanımını tersine çevirip söylüyoruz.
+    """
+    green_max = max((k for k, c in enumerate(cdf) if c < 0.95), default=0)
+    yellow_max = max((k for k, c in enumerate(cdf) if c < 0.9999), default=0)
+    return {"greenMax": green_max, "yellowMax": yellow_max}
 
 
 # ---- istatistiksel sınavlar ----------------------------------------------
@@ -163,14 +218,24 @@ def basel_zone(n: int, x: int, p: float, conf: float) -> dict:
     }
 
 
-# ---- VaR tahmin üreticileri ----------------------------------------------
+# ---- VaR / ES tahmin üreticileri -----------------------------------------
 
-def _forecast_historical(hist: np.ndarray, conf: float) -> float:
-    return float(-np.quantile(hist, 1.0 - conf))
+def _forecast_historical(hist: np.ndarray, conf: float) -> tuple[float, float]:
+    """Tarihsel simülasyon: ampirik kantil ve o kantilin ötesindeki ortalama."""
+    q = float(np.quantile(hist, 1.0 - conf))
+    tail = hist[hist <= q]
+    es = float(-tail.mean()) if tail.size else float(-q)
+    return -q, es
 
 
-def _forecast_parametric(hist: np.ndarray, z: float) -> float:
-    return float(-(hist.mean() - z * hist.std(ddof=1)))
+def _forecast_normal(mu: float, sigma: float, conf: float) -> tuple[float, float]:
+    """Normal varsayımı altında VaR ve ES (ikisi de pozitif kayıp).
+
+    ES = -mu + sigma · phi(z) / (1 - conf)   — kapalı form, simülasyon yok.
+    """
+    z = _ND.inv_cdf(conf)
+    pdf = math.exp(-0.5 * z * z) / math.sqrt(2.0 * math.pi)
+    return -(mu - z * sigma), -mu + sigma * pdf / (1.0 - conf)
 
 
 def _ewma_sigma(returns: np.ndarray, seed_window: int) -> np.ndarray:
@@ -186,6 +251,64 @@ def _ewma_sigma(returns: np.ndarray, seed_window: int) -> np.ndarray:
     for t in range(1, n):
         sigma2[t] = EWMA_LAMBDA * sigma2[t - 1] + (1.0 - EWMA_LAMBDA) * returns[t - 1] ** 2
     return np.sqrt(sigma2)
+
+
+# ---- Expected Shortfall sınavı (Acerbi–Székely Z2) ------------------------
+
+def _z2_statistic(sample: np.ndarray, var: np.ndarray, es: np.ndarray,
+                  p: float) -> np.ndarray:
+    """Acerbi–Székely ikinci test istatistiği.
+
+        Z2 = Σ_t [ X_t · 1{X_t < -VaR_t} / (T · p · ES_t) ] + 1
+
+    `sample` tek bir seri (T,) ya da simülasyon yığını (M, T) olabilir.
+    Doğru model altında E[Z2] = 0. NEGATİF değerler kuyruk kayıplarının
+    tahmin edilen ES'ten büyük olduğunu, yani ES'in RİSKİ AZ GÖSTERDİĞİNİ
+    söyler — tehlikeli yön budur, testi tek taraflı okuyoruz.
+    """
+    x = np.atleast_2d(sample)
+    t = x.shape[1]
+    # Sıfır oynaklıklı bir pencere (ör. NAV'ı hiç değişmemiş fon) ES'i sıfır
+    # yapar ve bölme patlar; taban koyup sonucu sonlu tutuyoruz.
+    es_safe = np.maximum(np.asarray(es, dtype=float), 1e-12)
+    breach = x < -var
+    contrib = np.where(breach, x / (t * p * es_safe), 0.0)
+    return contrib.sum(axis=1) + 1.0
+
+
+def _es_backtest(actual: np.ndarray, var: np.ndarray, es: np.ndarray,
+                 p: float, draws: np.ndarray) -> dict:
+    """Z2 ve simülasyonla bulunmuş p-değeri.
+
+    Z2'nin dağılımı kapalı formda yok. Acerbi–Székely'nin önerdiği yol:
+    modelin KENDİ öngörü dağılımından senaryo üretip Z2'yi orada yeniden
+    hesaplamak. `draws` (M, T) o senaryolardır ve her yöntem için kendi
+    dağılımından üretilir (bkz. run()).
+    """
+    obs = float(_z2_statistic(actual, var, es, p)[0])
+    sims = _z2_statistic(draws, var, es, p)
+    # Tek taraflı: yalnızca "gözlenenden daha kötü" senaryoların payı.
+    pv = float(np.mean(sims <= obs))
+
+    flags = actual < -var
+    n_exc = int(flags.sum())
+    realized_tail = float(-actual[flags].mean()) if n_exc else None
+    predicted_tail = float(es[flags].mean()) if n_exc else None
+    return {
+        "level": None,          # run() dolduruyor
+        "z2": obs,
+        "pValue": pv,
+        "reject": bool(pv < 0.05),
+        "exceptions": n_exc,
+        "avgEs": float(es.mean()),
+        "avgVar": float(var.mean()),
+        "realizedTailLoss": realized_tail,
+        "predictedTailLoss": predicted_tail,
+        # >1 ise gerçekleşen kuyruk kaybı tahmini aşmış demektir.
+        "tailRatio": (realized_tail / predicted_tail)
+                     if (realized_tail and predicted_tail) else None,
+        "simulations": int(draws.shape[0]),
+    }
 
 
 # ---- ana çalıştırıcı ------------------------------------------------------
@@ -210,28 +333,67 @@ def run(returns: np.ndarray, dates: list[str], conf: float, window: int,
         )
 
     start = n_total - test_n
-    z = NormalDist().inv_cdf(conf)
     p = 1.0 - conf
+    p_es = 1.0 - ES_LEVEL
     ewma_sigma = _ewma_sigma(r, window)
+    rng = np.random.default_rng(ES_SEED)
 
-    var_hist, var_param, var_ewma = [], [], []
-    for i in range(start, n_total):
+    # Kayan tahminler. Her gün için hem kullanıcının seçtiği düzeyde VaR,
+    # hem de FRTB'nin ES düzeyinde (%97,5) VaR+ES üretiliyor.
+    keys = ("historical", "parametric", "ewma")
+    var = {k: [] for k in keys}
+    var_es = {k: [] for k in keys}
+    es = {k: [] for k in keys}
+    windows = np.empty((test_n, window), dtype=float)   # tarihsel bootstrap için
+    mu = np.empty(test_n, dtype=float)
+    sd = np.empty(test_n, dtype=float)
+
+    for j, i in enumerate(range(start, n_total)):
         # i gününü tahmin ederken YALNIZCA [i-window, i) kullanılır.
         past = r[i - window:i]
-        var_hist.append(_forecast_historical(past, conf))
-        var_param.append(_forecast_parametric(past, z))
-        var_ewma.append(float(z * ewma_sigma[i]))
+        windows[j] = past
+        m, s = float(past.mean()), float(past.std(ddof=1))
+        mu[j], sd[j] = m, s
+
+        v, _ = _forecast_historical(past, conf)
+        var["historical"].append(v)
+        v_es, e_es = _forecast_historical(past, ES_LEVEL)
+        var_es["historical"].append(v_es)
+        es["historical"].append(e_es)
+
+        v, _ = _forecast_normal(m, s, conf)
+        var["parametric"].append(v)
+        v_es, e_es = _forecast_normal(m, s, ES_LEVEL)
+        var_es["parametric"].append(v_es)
+        es["parametric"].append(e_es)
+
+        sig = float(ewma_sigma[i])
+        v, _ = _forecast_normal(0.0, sig, conf)
+        var["ewma"].append(v)
+        v_es, e_es = _forecast_normal(0.0, sig, ES_LEVEL)
+        var_es["ewma"].append(v_es)
+        es["ewma"].append(e_es)
 
     actual = r[start:]
     test_dates = list(dates[start:])
 
+    # H0 senaryoları: her yöntem KENDİ öngörü dağılımından çekiliyor.
+    # Tarihsel simülasyonun öngörü dağılımı tahmin penceresinin kendisidir,
+    # o yüzden pencereden yeniden örnekleme (bootstrap) yapılıyor.
+    sig_test = ewma_sigma[start:n_total]          # test günlerinin EWMA sigması
+    idx = rng.integers(0, window, size=(ES_SIMULATIONS, test_n))
+    draws = {
+        "historical": windows[np.arange(test_n), idx],
+        "parametric": mu + sd * rng.standard_normal((ES_SIMULATIONS, test_n)),
+        "ewma": sig_test * rng.standard_normal((ES_SIMULATIONS, test_n)),
+    }
+
     methods = {}
-    for key, forecasts in (("historical", var_hist), ("parametric", var_param),
-                           ("ewma", var_ewma)):
-        v = np.asarray(forecasts, dtype=float)
+    for key in keys:
+        v = np.asarray(var[key], dtype=float)
         flags = actual < -v                       # ihlal: kayıp VaR'ı aştı
-        idx = [int(i) for i in np.nonzero(flags)[0]]
-        x = len(idx)
+        idx_breach = [int(i) for i in np.nonzero(flags)[0]]
+        x = len(idx_breach)
 
         excess = (-v - actual)[flags] if x else np.array([])
         # arka arkaya en uzun ihlal serisi
@@ -240,38 +402,53 @@ def run(returns: np.ndarray, dates: list[str], conf: float, window: int,
             streak = streak + 1 if f else 0
             best = max(best, streak)
 
+        es_stats = _es_backtest(actual, np.asarray(var_es[key], dtype=float),
+                                np.asarray(es[key], dtype=float), p_es, draws[key])
+        es_stats["level"] = ES_LEVEL
+
+        uc = kupiec_pof(test_n, x, p)
+        ind = christoffersen_independence(flags)
+        if uc["lr"] is not None and ind["lr"] is not None:
+            cc = uc["lr"] + ind["lr"]
+            cc_p = _chi2_sf(cc, 2)
+            conditional = {"lr": cc, "pValue": cc_p, "reject": bool(cc_p < 0.05)}
+        else:
+            conditional = {"lr": None, "pValue": None, "reject": None}
+
         methods[key] = {
             "var": [float(val) for val in v],
-            "breaches": idx,
+            "es": [float(val) for val in es[key]],
+            "breaches": idx_breach,
             "stats": {
                 "observations": int(test_n),
                 "exceptions": x,
                 "expected": float(test_n * p),
+                # Risk yöneticisi bu oranı bir bakışta okur: 2.4x = ciddi sapma.
+                "ratio": (x / (test_n * p)) if test_n * p > 0 else None,
                 "rate": float(x / test_n),
-                "kupiec": kupiec_pof(test_n, x, p),
-                "independence": christoffersen_independence(flags),
+                "kupiec": uc,
+                "independence": ind,
+                "conditional": conditional,
                 "basel": basel_zone(test_n, x, p, conf),
+                "es": es_stats,
                 "worstExcess": float(excess.max()) if excess.size else None,
                 "avgExcess": float(excess.mean()) if excess.size else None,
                 "maxConsecutive": int(best),
                 "avgVar": float(v.mean()),
             },
         }
-        # Koşullu kapsama = Kupiec + bağımsızlık, khi-kare(2).
-        uc = methods[key]["stats"]["kupiec"]["lr"]
-        ind = methods[key]["stats"]["independence"]["lr"]
-        if uc is not None and ind is not None:
-            cc = uc + ind
-            cc_p = _chi2_sf(cc, 2)
-            methods[key]["stats"]["conditional"] = {
-                "lr": cc, "pValue": cc_p, "reject": bool(cc_p < 0.05)}
-        else:
-            methods[key]["stats"]["conditional"] = {"lr": None, "pValue": None, "reject": None}
 
+    cdf = _cdf_table(test_n, p)
+    lo, hi = binom_interval(cdf, 0.95)
     return {
         "dates": test_dates,
         "returns": [float(x) for x in actual],
         "methods": methods,
+        "expectation": {
+            "expected": float(test_n * p),
+            "ci95": [int(lo), int(hi)],
+            **basel_thresholds(cdf),
+        },
         "window": {
             "estimation": int(window),
             "test": int(test_n),

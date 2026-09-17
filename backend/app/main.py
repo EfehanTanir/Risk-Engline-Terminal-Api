@@ -26,6 +26,7 @@ from . import backtest as backtest_mod
 from . import gold as gold_mod
 from . import news as news_mod
 from . import risk
+from . import stress
 from . import tefas_client as tefas
 from . import yahoo
 
@@ -48,6 +49,7 @@ app.add_middleware(
 # beacon. Everything it needs is optional, so a missing ADMIN_TOTP_SECRET or
 # Upstash config degrades the panel without touching the rest of the API.
 app.include_router(admin_mod.router)
+app.include_router(stress.router)
 
 
 @app.middleware("http")
